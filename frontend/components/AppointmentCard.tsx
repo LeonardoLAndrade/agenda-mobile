@@ -2,16 +2,24 @@ import React from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 type Props = {
-  time: string;
+  dataInicio: string;
+  dataFim: string;
   client: string;
   onEdit: () => void;
 };
 
-export default function AppointmentCard({ time, client, onEdit }: Props) {
+export default function AppointmentCard({
+  dataInicio,
+  dataFim,
+  client,
+  onEdit,
+}: Props) {
   return (
     <View style={styles.card}>
       <View>
-        <Text style={styles.time}>{time}</Text>
+        <Text style={styles.time}>
+          {dataInicio} - {dataFim}
+        </Text>
         <Text style={styles.client}>{client}</Text>
       </View>
       <TouchableOpacity onPress={onEdit}>

@@ -11,19 +11,26 @@ import {
   Pressable,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
 import CalendarView from "../components/CalendarView";
 import DateHeader from "../components/DateHeader";
 import AppointmentCard from "../components/AppointmentCard";
+import api from "../../frontend/src/services/api";
 
 type Event = {
   id: string;
   date: string;
-  time: string;
+  timeInicio: string;
+  timeFim: string;
   client: string;
   especialidade: string;
+  dataInicioISO: string;
+  dataFimISO: string;
+  profissionalId: number;
+  procedimentoId?: number;
 };
 
 export default function ScheduleScreen() {
@@ -31,41 +38,74 @@ export default function ScheduleScreen() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   // estado do modal de edição
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [editTime, setEditTime] = useState("");
+  const [editTimeInicio, setEditTimeInicio] = useState("");
+  const [editTimeFim, setEditTimeFim] = useState("");
   const [editClient, setEditClient] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [events, setEvents] = useState<Event[]>([]);
+
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
 
-  const [events, setEvents] = useState<Event[]>([
-    {
-      id: "1",
-      date: "2025-05-08",
-      time: "09:00",
-      client: "João Silva",
-      especialidade: "Medicina",
-    },
-    {
-      id: "2",
-      date: "2025-05-08",
-      time: "10:30",
-      client: "Maria Souza",
-      especialidade: "NPJ",
-    },
-    {
-      id: "3",
-      date: "2025-05-10",
-      time: "11:00",
-      client: "Carlos Pereira",
-      especialidade: "Enfermagem",
-    },
-    {
-      id: "4",
-      date: "2025-05-15",
-      time: "10:30",
-      client: "Maria Souza",
-      especialidade: "Odontologia",
-    },
-  ]);
+  useEffect(() => {
+    api
+      .get("/agenda")
+      .then((res) => {
+        const rawList: any[] = res.data;
+        const adapted: Event[] = rawList
+          .filter((item) => item.data_inicio && item.data_fim)
+          .map((item) => {
+            const dataInicio = item.data_inicio;
+            const dataFim = item.data_fim;
+
+            const dateInicioOnly = dataInicio.split("T")[0]; // “2024-12-07”
+            const timeInicioOnly = dataInicio.split("T")[1].substring(0, 5); // “19:30”
+
+            const timeFimOnly = dataFim.split("T")[1].substring(0, 5); // “19:30”
+
+            return {
+              id: String(item.id_agenda),
+              date: dateInicioOnly,
+              timeInicio: timeInicioOnly,
+              timeFim: timeFimOnly,
+              client: item.ag_profissionai.nome_profissional,
+              especialidade:
+                item.ag_profissionai.especialidade.nome_especialidade,
+              dataInicioISO: dataInicio,
+              dataFimISO: dataFim,
+              profissionalId: item.ag_profissionai.id_profissional,
+              procedimentoId: item.id_procedimento,
+            };
+          });
+        setEvents(adapted);
+      })
+      .catch((err) => {
+        console.error("Erro ao buscar agendamentos:", err);
+        setErrorMsg("Não foi possível carregar os agendamentos.");
+      })
+      .finally(() => setLoading(false));
+  }, [events]);
+
+  // Se estiver carregando, mostra um indicador
+  if (loading) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#029046" />
+      </SafeAreaView>
+    );
+  }
+
+  // Se deu erro, exibe mensagem
+  if (errorMsg) {
+    return (
+      <SafeAreaView style={styles.loadingContainer}>
+        <Text style={styles.errorText}>{errorMsg}</Text>
+      </SafeAreaView>
+    );
+  }
+
   const eventsWithColor = events.map((ev) => ({
     ...ev,
     color: stringToHslColor(ev.especialidade), // ou ev.type, ou ev.id
@@ -74,7 +114,10 @@ export default function ScheduleScreen() {
   // 1) agrupe por data
   const grouped = eventsWithColor.reduce((acc, ev) => {
     if (!acc[ev.date]) acc[ev.date] = [];
-    acc[ev.date].push({ key: `${ev.date}-${ev.color}`, color: ev.color });
+    acc[ev.date].push({
+      key: `${ev.id}-${ev.color}`,
+      color: ev.color,
+    });
     return acc;
   }, {} as Record<string, { key: string; color: string }[]>);
 
@@ -84,7 +127,7 @@ export default function ScheduleScreen() {
     let toShow = dots;
     let hasMore = false;
 
-    if (dots.length > MAX_DOTS) {
+    if (dots?.length > MAX_DOTS) {
       toShow = dots.slice(0, MAX_DOTS);
       hasMore = true;
     }
@@ -103,22 +146,55 @@ export default function ScheduleScreen() {
   // ao clicar em "Editar" de um card
   const handleEdit = (ev: Event) => {
     setEditingEvent(ev);
-    setEditTime(ev.time);
+    setEditTimeInicio(ev.timeInicio);
+    setEditTimeFim(ev.timeFim);
     setEditClient(ev.client);
   };
 
   // salvar alterações
-  const saveEdit = () => {
+  function saveEdit() {
     if (!editingEvent) return;
-    setEvents((prev) =>
-      prev.map((ev) =>
-        ev.id === editingEvent.id
-          ? { ...ev, time: editTime, client: editClient }
-          : ev
-      )
-    );
-    setEditingEvent(null);
-  };
+
+    const profId = Number(editingEvent.profissionalId);
+
+    const datePart = editingEvent.dataInicioISO.split("T")[0]; // ex: "2024-12-07"
+    const dataInicioISO = `${datePart}T${editTimeInicio}:00.000Z`;
+    const dataFimISO = new Date(`${datePart}T${editTimeFim}:00Z`);
+
+    const payload = {
+      data_inicio: dataInicioISO,
+      data_fim: dataFimISO.toISOString(),
+      ag_profissional_id: profId,
+      // Se quiser enviar descrição complementar (por exemplo, nome do procedimento),
+      // use a chave correta esperada pela API, algo como:
+      // descricao_complementar: editingEvent.procedimento,
+      // id_procedimento: editingEvent.id_procedimento,
+    };
+
+    api
+      .put(`/agenda/${editingEvent.id}`, payload)
+      .then(() => {
+        // Atualize o estado local com as mudanças visuais
+        setEvents((prev) =>
+          prev.map((ev) =>
+            ev.id === editingEvent.id
+              ? {
+                  ...ev,
+                  timeInicio: editTimeInicio,
+                  timeFim: editTimeFim,
+                  client: editClient,
+                }
+              : ev
+          )
+        );
+        setEditingEvent(null);
+        Alert.alert("Sucesso", "Agendamento salvo com sucesso.");
+      })
+      .catch((err) => {
+        console.error("Erro ao editar agendamento:", err);
+        Alert.alert("Falha ao salvar alterações");
+      });
+  }
 
   // ao clicar em "Cancelar Evento" de um card
   const handleCancelar = () => {
@@ -177,7 +253,7 @@ export default function ScheduleScreen() {
           )}
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {selectedDate !== null && filteredEvents.length === 0 ? (
+            {selectedDate !== null && filteredEvents?.length === 0 ? (
               <Text style={styles.hint}>
                 Nenhum agendamento para esta data.
               </Text>
@@ -185,7 +261,8 @@ export default function ScheduleScreen() {
               filteredEvents.map((ev) => (
                 <AppointmentCard
                   key={ev.id}
-                  time={ev.time}
+                  dataInicio={ev.dataInicioISO.split("T")[1].substring(0, 5)}
+                  dataFim={ev.dataFimISO.split("T")[1].substring(0, 5)}
                   client={ev.client}
                   onEdit={() => handleEdit(ev)}
                 />
@@ -204,17 +281,30 @@ export default function ScheduleScreen() {
                 <Text style={styles.modalClose}>✕</Text>
               </TouchableOpacity>
             </View>
-            <Text>Hora</Text>
-            <TextInput
-              style={styles.input}
-              value={editTime}
-              onChangeText={setEditTime}
-            />
+            <View style={styles.hours}>
+              <View>
+                <Text>Horário de Início</Text>
+                <TextInput
+                  style={styles.inputHours}
+                  value={editTimeInicio}
+                  onChangeText={setEditTimeInicio}
+                />
+              </View>
+              <View>
+                <Text>Horário de Término</Text>
+                <TextInput
+                  style={styles.inputHours}
+                  value={editTimeFim}
+                  onChangeText={setEditTimeFim}
+                />
+              </View>
+            </View>
 
             <Text style={{ marginTop: 12 }}>Cliente</Text>
             <TextInput
-              style={styles.input}
+              style={styles.inputReadOnly}
               value={editClient}
+              readOnly
               onChangeText={setEditClient}
             />
 
@@ -242,7 +332,7 @@ export default function ScheduleScreen() {
 /** gera um inteiro 0..(mod-1) a partir de uma string */
 function hashString(str: string, mod = 360) {
   let hash = 0;
-  for (let i = 0; i < str.length; i++) {
+  for (let i = 0; i < str?.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
     hash |= 0; // converte para 32-bit
   }
@@ -259,6 +349,8 @@ function stringToHslColor(str: string) {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: "#F2F2F2" },
+  loadingContainer: { flex: 1, justifyContent: "center", alignItems: "center" },
+  errorText: { color: "#C0392B", fontSize: 16 },
   content: { flex: 1 },
 
   calendarContainer: {
@@ -317,6 +409,29 @@ const styles = StyleSheet.create({
   },
   modalTitle: { fontSize: 18, fontWeight: "bold", marginBottom: 12 },
   modalClose: { fontSize: 20, color: "#666" },
+  hours: {
+    display: "flex",
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  inputHours: {
+    maxWidth: "90%",
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    height: 40,
+    paddingHorizontal: 8,
+    marginTop: 4,
+  },
+  inputReadOnly: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    backgroundColor: "#e9e9e9",
+    borderRadius: 6,
+    height: 40,
+    paddingHorizontal: 8,
+    marginTop: 4,
+  },
   input: {
     borderWidth: 1,
     borderColor: "#ccc",
