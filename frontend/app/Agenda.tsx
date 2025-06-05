@@ -198,6 +198,8 @@ export default function ScheduleScreen() {
 
   // ao clicar em "Cancelar Evento" de um card
   const handleCancelar = () => {
+    if (!editingEvent) return;
+
     Alert.alert(
       "Cancelar Evento",
       "Tem certeza que deseja cancelar este evento?",
@@ -210,8 +212,19 @@ export default function ScheduleScreen() {
           text: "Cancelar",
           style: "destructive",
           onPress: () => {
-            setEditingEvent(null);
-            console.log("Evento Cancelado"); // inserir lógica de cancelamento
+            api
+              .delete(`/agenda/${editingEvent.id}`)
+              .then(() => {
+                setEvents((prev) =>
+                  prev.filter((ev) => ev.id !== editingEvent.id)
+                );
+                setEditingEvent(null);
+                Alert.alert("Sucesso", "Agendamento cancelado.");
+              })
+              .catch((err) => {
+                console.error("Erro ao cancelar agendamento:", err);
+                Alert.alert("Falha ao cancelar o evento.");
+              });
           },
         },
       ]

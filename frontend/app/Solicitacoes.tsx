@@ -1,3 +1,4 @@
+// src/screens/Solicitacoes.tsx
 import React, { useState } from "react";
 import {
   View,
@@ -7,54 +8,59 @@ import {
   Pressable,
   Modal,
   TouchableOpacity,
+  Alert,
 } from "react-native";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import Header from "../components/Header"; // seu header com menu e logo
 import { SafeAreaView } from "react-native-safe-area-context";
+import api from "../src/services/api"; // supondo que seu Axios está configurado em src/services/api.ts
 
-// Modelo de dados da solicitação
-// Modelo ajustado para alterações
+// 1) Adicionamos eventId ao modelo para referenciar o agendamento correspondente:
 type Solicitation = {
   id: string;
+  eventId: string; // <-- ID do agendamento que queremos deletar
   type: "change" | "cancel";
-  oldDate: string; // data antiga
-  oldFrom: string; // hora inicial antiga
-  oldTo: string; // hora final antiga
-  newDate?: string; // data nova (só em change)
-  newFrom?: string; // hora inicial nova
-  newTo?: string; // hora final nova
+  oldDate: string;
+  oldFrom: string;
+  oldTo: string;
+  newDate?: string;
+  newFrom?: string;
+  newTo?: string;
   client: string;
   description: string;
 };
 
-// 2) Array de mock (correto: [] de Solicitation)
-const MOCK: Solicitation[] = [
+// 2) Mock inicial (em produção, você viria da API ou DB)
+const INITIAL_MOCK: Solicitation[] = [
   {
     id: "1",
+    eventId: "6", // supondo que o agendamento 2 exista na tabela agenda
     type: "change",
-    oldDate: "2025-03-08",
-    oldFrom: "10:00",
-    oldTo: "11:00",
-    newDate: "2025-03-08",
+    oldDate: "2025-06-05",
+    oldFrom: "08:07",
+    oldTo: "08:57",
+    newDate: "2025-06-05",
     newFrom: "14:00",
     newTo: "15:00",
     client: "João Francisco",
     description:
-      "SUPORTE NUTRICIONAL CLÍNICO com NUTRIÇÃO – FAGNER RODRIGUES DE ANDRADE",
+      "COLETA DE SANGUE PARA HEMOGRAMA COMPLETO com FISIOTERAPIA  - LUCAS SANTOS ANDRADE",
   },
   {
     id: "2",
+    eventId: "9", // supondo que o agendamento 3 exista na tabela agenda
     type: "cancel",
-    oldDate: "2025-03-11",
-    oldFrom: "15:00",
-    oldTo: "16:00",
+    oldDate: "2025-06-23",
+    oldFrom: "16:00",
+    oldTo: "16:30",
     client: "Gabriel Pereira",
     description: "INTERVENÇÃO EM CRISES com PSICOLOGIA – JOÃO GUILHERME LEMES",
   },
 ];
 
 export default function Solicitacoes() {
+  const [list, setList] = useState<Solicitation[]>(INITIAL_MOCK);
   const [modalVisible, setModalVisible] = useState(false);
   const [selected, setSelected] = useState<Solicitation | null>(null);
 
@@ -70,6 +76,81 @@ export default function Solicitacoes() {
   const formatDate = (iso: string) =>
     format(parseISO(iso), "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
 
+  // Handler unificado para remover a solicitação do estado local
+  const removeSolicitation = (solicId: string) => {
+    setList((prev) => prev.filter((item) => item.id !== solicId));
+  };
+
+  // 1) Cancelamento de evento: deleta agenda e remove solicitação
+  const handleCancelSolicitation = () => {
+    if (!selected) return;
+    Alert.alert(
+      "Remover Solicitação",
+      "Deseja realmente remover esta solicitação e o agendamento associado?",
+      [
+        { text: "Não", style: "cancel" },
+        {
+          text: "Sim",
+          style: "destructive",
+          onPress: () => {
+            api
+              .delete(`/agenda/${selected.eventId}`)
+              .then(() => {
+                removeSolicitation(selected.id);
+                close();
+                Alert.alert("Sucesso", "Solicitação e agendamento removidos.");
+              })
+              .catch((err) => {
+                console.error("Erro ao excluir agendamento:", err);
+                Alert.alert(
+                  "Falha",
+                  "Não foi possível remover o agendamento. Tente novamente."
+                );
+              });
+          },
+        },
+      ]
+    );
+  };
+
+  // 2) Aprovar alteração: atualiza agenda e remove solicitação
+  const handleApproveChange = () => {
+    if (!selected) return;
+
+    // Valida campos newDate, newFrom, newTo
+    if (!selected.newDate || !selected.newFrom || !selected.newTo) {
+      Alert.alert("Erro", "Dados de nova data/hora estão incompletos.");
+      return;
+    }
+
+    // Monta data_inicio ISO (YYYY-MM-DDThh:mm:00.000Z)
+    const inicioISO = `${selected.newDate}T${selected.newFrom}:00.000Z`;
+
+    // Monta data_fim ISO (YYYY-MM-DDThh:mm:00.000Z)
+    const fimISO = `${selected.newDate}T${selected.newTo}:00.000Z`;
+
+    const payload = {
+      data_inicio: inicioISO,
+      data_fim: fimISO,
+      // Se necessário, incluir ag_profissional_id ou id_procedimento aqui
+    };
+
+    api
+      .put(`/agenda/${selected.eventId}`, payload)
+      .then(() => {
+        removeSolicitation(selected.id);
+        close();
+        Alert.alert("Sucesso", "Evento atualizado com sucesso.");
+      })
+      .catch((err) => {
+        console.error("Erro ao alterar o agendamento:", err);
+        Alert.alert(
+          "Falha",
+          "Não foi possível atualizar o agendamento. Tente novamente."
+        );
+      });
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.flex}>
@@ -77,7 +158,7 @@ export default function Solicitacoes() {
         <Text style={styles.title}>SOLICITAÇÕES</Text>
 
         <FlatList
-          data={MOCK}
+          data={list}
           keyExtractor={(i) => i.id}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
@@ -93,6 +174,11 @@ export default function Solicitacoes() {
               <Text style={styles.cardDots}>⋯</Text>
             </Pressable>
           )}
+          ListEmptyComponent={
+            <Text style={styles.emptyText}>
+              Não há solicitações no momento.
+            </Text>
+          }
         />
 
         {selected && (
@@ -106,7 +192,7 @@ export default function Solicitacoes() {
               <View style={styles.modal}>
                 <View style={styles.modalHeader}>
                   <Text style={styles.modalTitle}>
-                    {selected?.type === "change"
+                    {selected.type === "change"
                       ? "Alteração de Data/Hora"
                       : "Cancelamento de Evento"}
                   </Text>
@@ -117,7 +203,7 @@ export default function Solicitacoes() {
 
                 {selected.type === "change" ? (
                   <>
-                    {/* Linha antiga em vermelho */}
+                    {/* Exibe data antiga (vermelho) */}
                     <View style={styles.modalRow}>
                       <Text style={styles.modalLabel}>📅</Text>
                       <Text style={styles.modalText}>
@@ -131,7 +217,7 @@ export default function Solicitacoes() {
                       </Text>
                     </View>
 
-                    {/* Linha nova em verde */}
+                    {/* Exibe data nova (verde) */}
                     <View style={styles.modalRow}>
                       <Text style={styles.modalLabel}>📅</Text>
                       <Text style={styles.modalText}>
@@ -146,7 +232,7 @@ export default function Solicitacoes() {
                     </View>
                   </>
                 ) : (
-                  /* renderização antiga para 'cancel' */
+                  /* Exibe apenas a data antiga (cancel) */
                   <View style={styles.modalRow}>
                     <Text style={styles.modalLabel}>📅</Text>
                     <Text style={styles.modalText}>
@@ -155,34 +241,30 @@ export default function Solicitacoes() {
                     </Text>
                   </View>
                 )}
-                {/* cliente */}
+
+                {/* Cliente */}
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>👤</Text>
                   <Text style={styles.modalText}>{selected.client}</Text>
                 </View>
-                {/* descrição */}
+                {/* Descrição */}
                 <View style={styles.modalRow}>
                   <Text style={styles.modalLabel}>❗️</Text>
                   <Text style={styles.modalText}>{selected.description}</Text>
                 </View>
+
+                {/* Botões de ação */}
                 {selected.type === "change" ? (
-                  /* ações */
                   <View style={styles.modalActions}>
                     <Pressable
                       style={[styles.button, styles.cancelButton]}
-                      onPress={() => {
-                        /* lógica de cancelar */
-                        close();
-                      }}
+                      onPress={handleCancelSolicitation}
                     >
                       <Text style={styles.cancelText}>Cancelar</Text>
                     </Pressable>
                     <Pressable
                       style={[styles.button, styles.approveButton]}
-                      onPress={() => {
-                        /* lógica de aprovar */
-                        close();
-                      }}
+                      onPress={handleApproveChange}
                     >
                       <Text style={styles.approveText}>Aprovar</Text>
                     </Pressable>
@@ -191,10 +273,7 @@ export default function Solicitacoes() {
                   <View style={styles.modalActions}>
                     <Pressable
                       style={[styles.button, styles.cancelButton]}
-                      onPress={() => {
-                        /* lógica de aprovar */
-                        close();
-                      }}
+                      onPress={handleCancelSolicitation}
                     >
                       <Text style={styles.cancelText}>Cancelado</Text>
                     </Pressable>
@@ -219,6 +298,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
   },
   list: { padding: 16 },
+  emptyText: {
+    textAlign: "center",
+    color: "#666",
+    marginTop: 32,
+    fontSize: 16,
+  },
   card: {
     backgroundColor: "#F7F7F7",
     borderRadius: 6,
@@ -245,7 +330,7 @@ const styles = StyleSheet.create({
     color: "#999",
   },
 
-  // modal
+  // Modal
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -293,11 +378,11 @@ const styles = StyleSheet.create({
   cancelText: { color: "#FFF", fontWeight: "600" },
   approveText: { color: "#FFF", fontWeight: "600" },
   oldText: {
-    color: "#C0392B", // vermelho
+    color: "#C0392B",
     fontWeight: "600",
   },
   newText: {
-    color: "#27AE60", // verde
+    color: "#27AE60",
     fontWeight: "600",
   },
 });
