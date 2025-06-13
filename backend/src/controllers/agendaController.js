@@ -96,8 +96,6 @@ exports.Update = (req, res, next) => {
     data_fim,
     descricao_complementar,
     transporte,
-    cor,
-    situacao,
   } = req.body;
 
   Agenda.findByPk(id_agenda)
@@ -113,8 +111,6 @@ exports.Update = (req, res, next) => {
               data_fim: data_fim,
               descricao_complementar: descricao_complementar,
               transporte: transporte,
-              cor: cor,
-              situacao: situacao,
             },
             {
               where: { id_agenda: id_agenda },

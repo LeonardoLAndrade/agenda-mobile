@@ -4,25 +4,32 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 type Props = {
   dataInicio: string;
   dataFim: string;
-  client: string;
+  procedimento: string;
+  profissional: string;
+  especialidade: string;
   onEdit: () => void;
 };
 
 export default function AppointmentCard({
   dataInicio,
   dataFim,
-  client,
+  procedimento,
+  profissional,
+  especialidade,
   onEdit,
 }: Props) {
   return (
     <View style={styles.card}>
-      <View>
+      <View style={styles.content}>
         <Text style={styles.time}>
           {dataInicio} - {dataFim}
         </Text>
-        <Text style={styles.client}>{client}</Text>
+        <Text style={styles.label}>
+          {especialidade.toUpperCase()} - {profissional.toUpperCase()}
+        </Text>
+        <Text style={styles.procedimento}>{procedimento.toUpperCase()}</Text>
       </View>
-      <TouchableOpacity onPress={onEdit}>
+      <TouchableOpacity onPress={onEdit} style={styles.editButton}>
         <Text style={styles.edit}>Editar</Text>
       </TouchableOpacity>
     </View>
@@ -35,16 +42,39 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     backgroundColor: "#fff",
     padding: 12,
-    borderRadius: 8,
-    marginBottom: 8,
-    elevation: 2,
+    borderRadius: 12,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+    elevation: 1,
+  },
+  content: {
+    flex: 1,
+    paddingRight: 12,
   },
   time: {
     fontWeight: "bold",
     fontSize: 16,
+    marginBottom: 4,
+    color: "#111",
   },
-  client: {
-    color: "#666",
+  label: {
+    color: "#333",
+    fontSize: 13,
+    marginBottom: 2,
+    fontWeight: "600",
+  },
+  procedimento: {
+    color: "#444",
+    fontSize: 13,
+    fontStyle: "italic",
+  },
+  editButton: {
+    justifyContent: "center",
+    alignItems: "center",
+    paddingLeft: 12,
   },
   edit: {
     color: "#0066CC",

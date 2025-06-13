@@ -6,12 +6,7 @@ import {
   Text,
   ScrollView,
   useWindowDimensions,
-  Modal,
-  TextInput,
-  Pressable,
-  TouchableOpacity,
   Alert,
-  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../components/Header";
@@ -19,107 +14,122 @@ import CalendarView from "../components/CalendarView";
 import DateHeader from "../components/DateHeader";
 import AppointmentCard from "../components/AppointmentCard";
 import api from "../../frontend/src/services/api";
+import EditAppointmentModal, {
+  EditedEvent,
+  Especialidade,
+  ProcedimentoDTO,
+  ProfissionalDTO,
+} from "@/components/EditAppointmentModal";
+import CreateAppointmentForm from "@/components/CreateAppointmentForm";
 
-type Event = {
-  id: string;
-  date: string;
-  timeInicio: string;
-  timeFim: string;
-  client: string;
-  especialidade: string;
-  dataInicioISO: string;
-  dataFimISO: string;
-  profissionalId: number;
-  procedimentoId?: number;
+export interface AgProfissional {
+  codEspecialidade: string;
+  especialidade: {
+    codEspecialidade: string;
+    nomeEspecialidade: string;
+  };
+  idProfissional: number;
+  nomeProfissional: string;
+}
+
+export interface Procedimento {
+  codEspecialidade: string;
+  especialidade: {
+    codEspecialidade: string;
+    nomeEspecialidade: string;
+  };
+  idProcedimento: number;
+  descricaoProcedimento: string;
+}
+
+type Evento = {
+  agProfissional: AgProfissional;
+  dataFim: Date;
+  dataInicio: Date;
+  timeInicio?: string;
+  timeFim?: string;
+  descricaoComplementar: string;
+  idAgenda: number;
+  idProcedimento: number;
+  idProfissional: number;
+  procedimento: Procedimento;
+  transporte: boolean;
+  profissional?: AgProfissional;
 };
 
 export default function ScheduleScreen() {
   const MAX_DOTS = 3;
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
+
+  const [eventos, setEventos] = useState<EditedEvent[]>([]);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedEvent, setSelectedEvent] = useState<EditedEvent | null>(null);
   // estado do modal de edição
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [editingEvento, setEditingEvento] = useState<Evento | null>(null);
   const [editTimeInicio, setEditTimeInicio] = useState("");
   const [editTimeFim, setEditTimeFim] = useState("");
   const [editClient, setEditClient] = useState("");
 
-  const [loading, setLoading] = useState(true);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
-  const [events, setEvents] = useState<Event[]>([]);
+  const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
+  const [procedimentos, setProcedimentos] = useState<ProcedimentoDTO[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalDTO[]>([]);
 
   const { width } = useWindowDimensions();
   const isNarrow = width < 600;
 
   useEffect(() => {
+    // 1) Carrega eventos de "/agenda"
     api
-      .get("/agenda")
-      .then((res) => {
-        const rawList: any[] = res.data;
-        const adapted: Event[] = rawList
-          .filter((item) => item.data_inicio && item.data_fim)
-          .map((item) => {
-            const dataInicio = item.data_inicio;
-            const dataFim = item.data_fim;
+      .get<EditedEvent[]>("/agenda")
+      .then((res) => setEventos(res.data))
+      .catch(console.error);
 
-            const dateInicioOnly = dataInicio.split("T")[0]; // “2024-12-07”
-            const timeInicioOnly = dataInicio.split("T")[1].substring(0, 5); // “19:30”
+    // 2) Carrega especialidades, procedimentos, profissionais
+    api
+      .get<Especialidade[]>("/especialidades")
+      .then((res) => setEspecialidades(res.data))
+      .catch(console.error);
 
-            const timeFimOnly = dataFim.split("T")[1].substring(0, 5); // “19:30”
+    api
+      .get<ProcedimentoDTO[]>("/procedimentos")
+      .then((res) => setProcedimentos(res.data))
+      .catch(console.error);
 
-            return {
-              id: String(item.id_agenda),
-              date: dateInicioOnly,
-              timeInicio: timeInicioOnly,
-              timeFim: timeFimOnly,
-              client: item.ag_profissionai.nome_profissional,
-              especialidade:
-                item.ag_profissionai.especialidade.nome_especialidade,
-              dataInicioISO: dataInicio,
-              dataFimISO: dataFim,
-              profissionalId: item.ag_profissionai.id_profissional,
-              procedimentoId: item.id_procedimento,
-            };
-          });
-        setEvents(adapted);
-      })
-      .catch((err) => {
-        console.error("Erro ao buscar agendamentos:", err);
-        setErrorMsg("Não foi possível carregar os agendamentos.");
-      })
-      .finally(() => setLoading(false));
-  }, [events]);
+    api
+      .get<ProfissionalDTO[]>("/profissionais")
+      .then((res) => setProfissionais(res.data))
+      .catch(console.error);
+  }, []);
 
-  // Se estiver carregando, mostra um indicador
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#029046" />
-      </SafeAreaView>
-    );
-  }
-
-  // Se deu erro, exibe mensagem
-  if (errorMsg) {
-    return (
-      <SafeAreaView style={styles.loadingContainer}>
-        <Text style={styles.errorText}>{errorMsg}</Text>
-      </SafeAreaView>
-    );
-  }
-
-  const eventsWithColor = events.map((ev) => ({
+  const EventosWithColor = eventos.map((ev) => ({
     ...ev,
-    color: stringToHslColor(ev.especialidade), // ou ev.type, ou ev.id
+    color: stringToHslColor(
+      ev.ag_profissionai.especialidade.nome_especialidade
+    ), // ou ev.type, ou ev.id
   }));
 
-  // 1) agrupe por data
-  const grouped = eventsWithColor.reduce((acc, ev) => {
-    if (!acc[ev.date]) acc[ev.date] = [];
-    acc[ev.date].push({
-      key: `${ev.id}-${ev.color}`,
+  useEffect(() => {
+    // 1) Carrega eventos de "/agenda"
+    api
+      .get<EditedEvent[]>("/agenda")
+      .then((res) => setEventos(res.data))
+      .catch(console.error);
+  }, [eventos]);
+
+  type DotInfo = { key: string; color: string };
+  type MarkedRecord = Record<string, DotInfo[]>;
+
+  const grouped: MarkedRecord = EventosWithColor.reduce((acc, ev) => {
+    const dateOnly = ev.data_inicio.toString().split("T")[0];
+    if (!acc[dateOnly]) {
+      acc[dateOnly] = [];
+    }
+    acc[dateOnly].push({
+      key: `${ev.id_agenda}-${ev.color}`,
       color: ev.color,
     });
     return acc;
-  }, {} as Record<string, { key: string; color: string }[]>);
+  }, {} as MarkedRecord);
 
   // 2) limite o número de dots
   const markedDates: Record<string, any> = {};
@@ -144,40 +154,38 @@ export default function ScheduleScreen() {
   }
 
   // ao clicar em "Editar" de um card
-  const handleEdit = (ev: Event) => {
-    setEditingEvent(ev);
-    setEditTimeInicio(ev.timeInicio);
-    setEditTimeFim(ev.timeFim);
-    setEditClient(ev.client);
+  const handleEdit = (ev: EditedEvent) => {
+    setSelectedEvent(ev);
+    setModalVisible(true);
   };
 
   // salvar alterações
   function saveEdit() {
-    if (!editingEvent) return;
+    if (!editingEvento) return;
 
-    const profId = Number(editingEvent.profissionalId);
+    const profId = Number(editingEvento.idProfissional);
 
-    const datePart = editingEvent.dataInicioISO.split("T")[0]; // ex: "2024-12-07"
-    const dataInicioISO = `${datePart}T${editTimeInicio}:00.000Z`;
-    const dataFimISO = new Date(`${datePart}T${editTimeFim}:00Z`);
+    const datePart = editingEvento.dataInicio.toString().split("T")[0]; // ex: "2024-12-07"
+    const dataInicioISO = `${datePart} ${editTimeInicio}:00`;
+    const dataFimISO = `${datePart} ${editTimeFim}:00`;
 
     const payload = {
       data_inicio: dataInicioISO,
-      data_fim: dataFimISO.toISOString(),
+      data_fim: dataFimISO,
       ag_profissional_id: profId,
       // Se quiser enviar descrição complementar (por exemplo, nome do procedimento),
       // use a chave correta esperada pela API, algo como:
-      // descricao_complementar: editingEvent.procedimento,
-      // id_procedimento: editingEvent.id_procedimento,
+      // descricao_complementar: editingEvento.procedimento,
+      // id_procedimento: editingEvento.id_procedimento,
     };
 
     api
-      .put(`/agenda/${editingEvent.id}`, payload)
+      .put(`/agenda/${editingEvento.idAgenda}`, payload)
       .then(() => {
         // Atualize o estado local com as mudanças visuais
-        setEvents((prev) =>
+        setEventos((prev) =>
           prev.map((ev) =>
-            ev.id === editingEvent.id
+            ev.id_agenda === editingEvento.idAgenda
               ? {
                   ...ev,
                   timeInicio: editTimeInicio,
@@ -187,7 +195,7 @@ export default function ScheduleScreen() {
               : ev
           )
         );
-        setEditingEvent(null);
+        setEditingEvento(null);
         Alert.alert("Sucesso", "Agendamento salvo com sucesso.");
       })
       .catch((err) => {
@@ -198,11 +206,11 @@ export default function ScheduleScreen() {
 
   // ao clicar em "Cancelar Evento" de um card
   const handleCancelar = () => {
-    if (!editingEvent) return;
+    if (!editingEvento) return;
 
     Alert.alert(
       "Cancelar Evento",
-      "Tem certeza que deseja cancelar este evento?",
+      "Tem certeza que deseja cancelar este Evento?",
       [
         {
           text: "Retornar",
@@ -213,17 +221,17 @@ export default function ScheduleScreen() {
           style: "destructive",
           onPress: () => {
             api
-              .delete(`/agenda/${editingEvent.id}`)
+              .delete(`/agenda/${editingEvento.idAgenda}`)
               .then(() => {
-                setEvents((prev) =>
-                  prev.filter((ev) => ev.id !== editingEvent.id)
+                setEventos((prev) =>
+                  prev.filter((ev) => ev.id_agenda !== editingEvento.idAgenda)
                 );
-                setEditingEvent(null);
+                setEditingEvento(null);
                 Alert.alert("Sucesso", "Agendamento cancelado.");
               })
               .catch((err) => {
                 console.error("Erro ao cancelar agendamento:", err);
-                Alert.alert("Falha ao cancelar o evento.");
+                Alert.alert("Falha ao cancelar o Evento.");
               });
           },
         },
@@ -231,8 +239,64 @@ export default function ScheduleScreen() {
     );
   };
 
-  const filteredEvents = selectedDate
-    ? events.filter((appt) => appt.date === selectedDate)
+  // Quando selecionar um evento para editar:
+  const openEdit = (ev: EditedEvent) => {
+    setSelectedEvent(ev);
+    setModalVisible(true);
+  };
+
+  // Ao fechar sem salvar:
+  const handleClose = () => {
+    setModalVisible(false);
+    setSelectedEvent(null);
+  };
+
+  // Ao salvar alterações:
+  const handleSave = (updated: EditedEvent) => {
+    api
+      .put(`/agenda/${updated.id_agenda}`, {
+        data_inicio: updated.data_inicio,
+        data_fim: updated.data_fim,
+        descricao_complementar: updated.descricao_complementar,
+        id_profissional: updated.id_profissional,
+        id_procedimento: updated.id_procedimento,
+        transporte: updated.transporte,
+      })
+      .then(() => {
+        // Atualiza localmente a lista de events
+        setEventos((prev) =>
+          prev.map((e) => (e.id_agenda === updated.id_agenda ? updated : e))
+        );
+        setModalVisible(false);
+        setSelectedEvent(null);
+        Alert.alert("Sucesso", "Agendamento salvo com sucesso.");
+      })
+      .catch((err) => {
+        console.error("Erro ao salvar:", err);
+        Alert.alert("Erro", "Não foi possível salvar alterações.");
+      });
+  };
+
+  // Ao deletar:
+  const handleDelete = (idAgenda: number) => {
+    api
+      .delete(`/agenda/${idAgenda}`)
+      .then(() => {
+        setEventos((prev) => prev.filter((e) => e.id_agenda !== idAgenda));
+        setModalVisible(false);
+        setSelectedEvent(null);
+        Alert.alert("Removido", "Agendamento excluído com sucesso.");
+      })
+      .catch((err) => {
+        console.error("Erro ao excluir:", err);
+        Alert.alert("Erro", "Não foi possível excluir.");
+      });
+  };
+
+  const filteredEventos = selectedDate
+    ? eventos.filter(
+        (appt) => appt.data_inicio.toString().split("T")[0] === selectedDate
+      )
     : [];
 
   return (
@@ -260,84 +324,55 @@ export default function ScheduleScreen() {
           style={[isNarrow ? styles.listContainer : styles.sideListContainer]}
         >
           {selectedDate ? (
-            <DateHeader dateString={selectedDate} />
+            <>
+              <CreateAppointmentForm />
+              <DateHeader dateString={selectedDate} />
+            </>
           ) : (
             <Text style={styles.title}>Selecione uma data</Text>
           )}
 
           <ScrollView contentContainerStyle={styles.scrollContent}>
-            {selectedDate !== null && filteredEvents?.length === 0 ? (
+            {selectedDate !== null && filteredEventos?.length === 0 ? (
               <Text style={styles.hint}>
                 Nenhum agendamento para esta data.
               </Text>
             ) : (
-              filteredEvents.map((ev) => (
+              filteredEventos.map((ev) => (
                 <AppointmentCard
-                  key={ev.id}
-                  dataInicio={ev.dataInicioISO.split("T")[1].substring(0, 5)}
-                  dataFim={ev.dataFimISO.split("T")[1].substring(0, 5)}
-                  client={ev.client}
+                  key={ev.id_agenda}
+                  dataInicio={new Date(ev.data_inicio).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  dataFim={new Date(ev.data_fim).toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                  procedimento={ev.procedimento?.procedimento}
+                  profissional={ev.ag_profissionai?.nome_profissional}
+                  especialidade={
+                    ev.ag_profissionai?.especialidade?.nome_especialidade
+                  }
                   onEdit={() => handleEdit(ev)}
                 />
               ))
             )}
           </ScrollView>
         </View>
+        {selectedEvent && (
+          <EditAppointmentModal
+            visible={modalVisible}
+            editedEvent={selectedEvent}
+            especialidades={especialidades}
+            procedimentos={procedimentos}
+            profissionais={profissionais}
+            onClose={handleClose}
+            onSave={handleSave}
+            onDelete={handleDelete}
+          />
+        )}
       </View>
-      {/* Modal de edição */}
-      <Modal visible={!!editingEvent} transparent animationType="slide">
-        <View style={styles.modalOverlay}>
-          <View style={styles.modal}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Editar Agendamento</Text>
-              <TouchableOpacity onPress={() => setEditingEvent(null)}>
-                <Text style={styles.modalClose}>✕</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.hours}>
-              <View>
-                <Text>Horário de Início</Text>
-                <TextInput
-                  style={styles.inputHours}
-                  value={editTimeInicio}
-                  onChangeText={setEditTimeInicio}
-                />
-              </View>
-              <View>
-                <Text>Horário de Término</Text>
-                <TextInput
-                  style={styles.inputHours}
-                  value={editTimeFim}
-                  onChangeText={setEditTimeFim}
-                />
-              </View>
-            </View>
-
-            <Text style={{ marginTop: 12 }}>Cliente</Text>
-            <TextInput
-              style={styles.inputReadOnly}
-              value={editClient}
-              readOnly
-              onChangeText={setEditClient}
-            />
-
-            <View style={styles.modalActions}>
-              <Pressable
-                style={[styles.button, styles.cancelButton]}
-                onPress={handleCancelar}
-              >
-                <Text style={styles.cancelText}>Cancelar Evento</Text>
-              </Pressable>
-              <Pressable
-                style={[styles.button, styles.saveButton]}
-                onPress={saveEdit}
-              >
-                <Text style={styles.saveText}>Salvar</Text>
-              </Pressable>
-            </View>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 }
