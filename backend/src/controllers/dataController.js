@@ -1,121 +1,65 @@
-const Especialidade = require("../models/especialidade.js");
-const Procedimento = require("../models/procedimentos.js");
-const Ag_Profissional = require("../models/ag_profissionais.js");
+const {
+  Profissional,
+  PessoaFisica,
+  Especialidade,
+  Procedimento,
+  EspecProced,
+} = require("../models");
 const status = require("http-status");
 
-// Relacionamento: Profissional tem muitas Especialidades
-Ag_Profissional.belongsToMany(Especialidade, {
-  through: "ProfissionalEspecialidade",
-});
-Especialidade.belongsToMany(Ag_Profissional, {
-  through: "ProfissionalEspecialidade",
-});
-
-// Especialidade tem muitos Procedimentos
-Especialidade.belongsToMany(Procedimento, {
-  through: "EspecialidadeProcedimento",
-});
-Procedimento.belongsToMany(Especialidade, {
-  through: "EspecialidadeProcedimento",
-});
-
-exports.getProfissionaisPorEspecialidade = (req, res, next) => {
-  const especialidadeId = req.params.especialidadeId;
-
-  // Consultar os profissionais com base na especialidade
-  Ag_Profissional.findAll({
-    where: { cod_especialidade: especialidadeId },
-    include: {
-      model: Especialidade,
-      attributes: ["nome_especialidade"], // Incluir o nome da especialidade, se necessário
-    },
-  })
-    .then((profissionais) => {
-      if (profissionais.length > 0) {
-        res.status(200).send(profissionais); // Enviar os profissionais dessa especialidade
-      } else {
-        res.status(404).send({
-          message: "Nenhum profissional encontrado para esta especialidade",
-        });
-      }
-    })
+exports.getEspecialidades = (req, res, next) => {
+  Especialidade.findAll()
+    .then((especialidades) => res.status(status.OK).send(especialidades))
     .catch((error) => next(error));
 };
 
-exports.getEspecialidadesPorProfissional = (req, res, next) => {
-  const profissionalId = req.params.profissionalId;
+exports.getProcedimentos = async (req, res, next) => {
+  try {
+    const procedimentos = await Procedimento.findAll({
+      include: [
+        {
+          model: Especialidade,
+          as: "especialidades",
+          through: { attributes: [] }, // oculta dados da tabela ESPECPROCED
+          attributes: ["IDESPEC", "DESCESPEC"],
+        },
+      ],
+    });
 
-  Ag_Profissional.findByPk(profissionalId)
-    .then((profissional) => {
-      if (profissional) {
-        res.status(status.OK).send(profissional.cod_especialidade); // Enviar especialidades com procedimentos
-      } else {
-        res
-          .status(status.NOT_FOUND)
-          .send({ message: "Profissional não encontrado" });
-      }
-    })
-    .catch((error) => next(error));
+    res.status(200).send(procedimentos);
+  } catch (error) {
+    next(error);
+  }
 };
 
 exports.getProcedimentosPorEspecialidade = (req, res, next) => {
-  const especialidadeId = req.params.especialidadeId;
+  const idEspecialidade = req.params.id;
 
-  // Consultar os profissionais com base na especialidade
-  Procedimento.findAll({
-    where: { cod_especialidade: especialidadeId },
-    include: {
-      model: Especialidade,
-      attributes: ["nome_especialidade"], // Incluir o nome da especialidade, se necessário
-    },
+  EspecProced.findAll({
+    where: { ID_ESPEC: idEspecialidade },
+    include: [{ model: Procedimento, as: "procedimento" }],
   })
-    .then((procedimentos) => {
-      if (procedimentos.length > 0) {
-        res.status(200).send(procedimentos); // Enviar os procedimentos dessa especialidade
-      } else {
-        res.status(404).send({
-          message: "Nenhum procedimento encontrado para esta especialidade",
-        });
-      }
+    .then((result) => {
+      const procedimentos = result.map((r) => r.procedimento);
+      res.status(status.OK).send(procedimentos);
     })
     .catch((error) => next(error));
 };
 
-// Método para buscar todas as especialidades
-exports.getEspecialidades = (req, res, next) => {
-  Especialidade.findAll()
-    .then((especialidades) => {
-      if (especialidades) {
-        res.status(status.OK).send(especialidades);
-      } else {
-        res.status(status.NOT_FOUND).send();
-      }
-    })
+exports.getProfissionais = (req, res, next) => {
+  Profissional.findAll({
+    include: [{ model: PessoaFisica, as: "pessoa" }],
+  })
+    .then((profissionais) => res.status(status.OK).send(profissionais))
     .catch((error) => next(error));
 };
 
-// Método para buscar todos os procedimentos
-exports.getProcedimentos = (req, res, next) => {
-  Procedimento.findAll()
-    .then((procedimentos) => {
-      if (procedimentos) {
-        res.status(status.OK).send(procedimentos);
-      } else {
-        res.status(status.NOT_FOUND).send();
-      }
-    })
-    .catch((error) => next(error));
-};
+exports.getProfissionaisPorEspecialidade = (req, res, next) => {
+  const idEspecialidade = req.params.id;
 
-// Método para buscar todos os profissionais
-exports.getAgProfissionais = (req, res, next) => {
-  Ag_Profissional.findAll()
-    .then((ag_profissionais) => {
-      if (ag_profissionais) {
-        res.status(status.OK).send(ag_profissionais);
-      } else {
-        res.status(status.NOT_FOUND).send();
-      }
-    })
+  Profissional.findAll({
+    include: [{ model: PessoaFisica, as: "pessoa" }],
+  })
+    .then((profissionais) => res.status(status.OK).send(profissionais))
     .catch((error) => next(error));
 };

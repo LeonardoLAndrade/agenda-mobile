@@ -1,24 +1,27 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/database");
 
-const Especialidade = sequelize.define(
-  "ESPECIALIDADE",
+const Procedimento = sequelize.define(
+  "PROCEDIMENTO",
   {
-    IDESPEC: {
+    IDPROCED: {
       type: DataTypes.INTEGER,
       primaryKey: true,
     },
-    CODESPEC: {
+    CODPROCED: {
       type: DataTypes.STRING,
     },
-    DESCESPEC: {
+    DESCRPROC: {
       type: DataTypes.STRING,
+    },
+    VALORPROC: {
+      type: DataTypes.DECIMAL(10, 2),
     },
   },
   {
-    tableName: "ESPECIALIDADE",
+    tableName: "PROCEDIMENTO",
     timestamps: false,
   }
 );
 
-module.exports = Especialidade;
+module.exports = Procedimento;

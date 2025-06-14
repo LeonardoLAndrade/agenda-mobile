@@ -22,47 +22,52 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import api from "../src/services/api";
 
-/* ------------------------------------------------------------------ */
-/* Tipos                                                               */
-/* ------------------------------------------------------------------ */
 export type EditedEvent = {
-  [x: string]: any;
-  id_agenda: number;
-  id_profissional: number;
-  id_procedimento: number;
+  IDAGENDA: number;
+  ID_PROFISSIO: number;
+  ID_PROCED: number;
   titulo_agenda: string;
-  ag_profissional: {
-    cod_especialidade: string;
-    especialidade: { cod_especialidade: string; nome_especialidade: string };
-    id_profissional: number;
-    nome_profissional: string;
+  profissional: {
+    IDPROFISSIO: number;
+    especialidade: { IDESPEC: number; DESCESPEC: string };
+    pessoa: { NOMEPESSOA: string };
   };
   procedimento: {
-    cod_especialidade: string;
-    especialidade: { cod_especialidade: string; nome_especialidade: string };
-    id_procedimento: number;
-    procedimento: string;
+    IDPROCED: number;
+    DESCRPROC: string;
+    especialidades: [
+      {
+        IDESPEC: number;
+        DESCESPEC: string;
+      }
+    ];
   };
-  descricao_complementar: string;
-  data_inicio: string;
-  data_fim: string;
-  transporte: boolean;
-  situacao: boolean;
+  DESCRICAO: string;
+  DATAABERT: string;
+  DATAFIM: string;
+  SITUAGEN: boolean;
 };
 
 export type Especialidade = {
-  cod_especialidade: string;
-  nome_especialidade: string;
+  IDESPEC: number;
+  DESCESPEC: string;
 };
 export type ProcedimentoDTO = {
-  id_procedimento: number;
-  procedimento: string;
-  cod_especialidade: string;
+  IDPROCED: number;
+  DESCRPROC: string;
+  especialidades: [
+    {
+      IDESPEC: 5;
+      DESCESPEC: "Nutrição";
+    }
+  ];
 };
 export type ProfissionalDTO = {
-  id_profissional: number;
-  nome_profissional: string;
-  cod_especialidade: string;
+  IDPROFISSIO: number;
+  NOMEPESSOA: string;
+  pessoa: {
+    NOMEPESSOA: string;
+  };
 };
 
 type Props = {
@@ -76,9 +81,6 @@ type Props = {
   onDelete: (idAgenda: number) => void;
 };
 
-/* ------------------------------------------------------------------ */
-/* Helper  - Date → "YYYY-MM-DD HH:mm:ss" (hora local, sem fuso)       */
-/* ------------------------------------------------------------------ */
 const toMysqlString = (d: Date) => {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(
@@ -86,9 +88,6 @@ const toMysqlString = (d: Date) => {
   )}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-/* ------------------------------------------------------------------ */
-/* Componente                                                          */
-/* ------------------------------------------------------------------ */
 export default function EditAppointmentModal({
   visible,
   editedEvent,
@@ -99,35 +98,36 @@ export default function EditAppointmentModal({
   onSave,
   onDelete,
 }: Props) {
-  /* ----------------------------- estados ----------------------------- */
   const [showStartIOS, setShowStartIOS] = useState(false);
-  const [showEndIOS, setShowEndIOS] = useState(false);
-
   const [selectedProfissional, setSelectedProfissional] = useState<number>(
-    editedEvent.id_profissional
+    editedEvent.ID_PROFISSIO
   );
   const [descComplementar, setDescComplementar] = useState(
-    editedEvent.descricao_complementar
+    editedEvent.DESCRICAO
   );
-
   const [startDate, setStartDate] = useState<Date>(
-    new Date(editedEvent.data_inicio)
+    new Date(editedEvent.DATAABERT)
   );
-  const [endDate, setEndDate] = useState<Date>(new Date(editedEvent.data_fim));
-  const [needsTransport, setNeedsTransport] = useState(editedEvent.transporte);
+  const [endDate, setEndDate] = useState<Date>(new Date(editedEvent.DATAFIM));
   const [collapsed, setCollapsed] = useState(true);
-  const [filteredProfs, setFilteredProfs] = useState<ProfissionalDTO[]>([]);
+  // const [filteredProfs, setFilteredProfs] = useState<ProfissionalDTO[]>([]);
+
+  const getEspecialidadeNome = (id: number): string => {
+    return (
+      especialidades.find((e) => e.IDESPEC === id)?.DESCESPEC || "Especialidade"
+    );
+  };
+
   const [tituloAgenda, setTituloAgenda] = useState(() => {
-    const proc = editedEvent?.procedimento?.procedimento || "Procedimento";
-    const esp =
-      editedEvent?.procedimento?.especialidade?.nome_especialidade ||
-      "Especialidade";
+    const proc = editedEvent?.procedimento?.DESCRPROC || "Procedimento";
+    const esp = getEspecialidadeNome(
+      editedEvent?.procedimento?.especialidades[0]?.IDESPEC
+    );
     const prof =
-      editedEvent?.ag_profissionai?.nome_profissional || "Profissional";
+      editedEvent?.profissional?.pessoa?.NOMEPESSOA || "Profissional";
     return `${proc} com ${esp} - ${prof}`;
   });
 
-  /* ---------------- utilidade: mantém start < end ------------------- */
   const adjustEnd = (s: Date, e: Date) =>
     s >= e ? new Date(s.getTime() + 30 * 60_000) : e;
 
@@ -140,7 +140,6 @@ export default function EditAppointmentModal({
     }
   };
 
-  /* ------------------------- pickers Android ------------------------ */
   const openAndroidPicker = (type: "start" | "end") => {
     const current = type === "start" ? startDate : endDate;
     const minDate = type === "start" ? new Date() : startDate;
@@ -172,7 +171,6 @@ export default function EditAppointmentModal({
     });
   };
 
-  /* --------------------------- pickers iOS -------------------------- */
   const IOSPicker = ({
     value,
     type,
@@ -189,7 +187,6 @@ export default function EditAppointmentModal({
     />
   );
 
-  /* ---------------------- formatação para UI ------------------------ */
   const fmt = (d: Date) =>
     d.toLocaleDateString() +
     " " +
@@ -197,37 +194,49 @@ export default function EditAppointmentModal({
       .toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
       .replace(":", "h");
 
-  /* ----------------------------- salvar ----------------------------- */
   const handleSave = () => {
     const updated: EditedEvent = {
       ...editedEvent,
-      id_profissional: selectedProfissional,
-      descricao_complementar: descComplementar,
-      data_inicio: toMysqlString(startDate), // string local
-      data_fim: toMysqlString(endDate), // string local
-      transporte: needsTransport,
+      ID_PROFISSIO: selectedProfissional,
+      DESCRICAO: descComplementar,
+      DATAABERT: toMysqlString(startDate),
+      DATAFIM: toMysqlString(endDate),
     };
-    onSave(updated); // envia para o backend
+    onSave(updated);
   };
 
-  /* ---------------------- filtros fixos ----------------------------- */
-  const specialty = editedEvent.procedimento.cod_especialidade;
-  const procs = procedimentos.filter((p) => p.cod_especialidade === specialty);
+  const firstEspecId = editedEvent.procedimento?.especialidades?.[0]?.IDESPEC;
+  const procs = procedimentos.filter((p) =>
+    p.especialidades?.some((esp) => esp.IDESPEC === firstEspecId)
+  );
+
+  // procedimentos.map((p) => console.log(p));
+
+  // useEffect(() => {
+  //   const specialty = editedEvent.procedimento.especialidades[0].IDESPEC;
+  //   if (!specialty) return;
+
+  //   api
+  //     .get<ProfissionalDTO[]>(`/especialidade/${specialty}/profissionais`)
+  //     .then((res) => setFilteredProfs(res.data))
+  //     .catch((err) => {
+  //       console.error("Erro ao carregar profissionais:", err);
+  //       setFilteredProfs([]);
+  //     });
+  // }, [editedEvent]);
 
   useEffect(() => {
-    const specialty = editedEvent.procedimento.cod_especialidade;
-    if (!specialty) return;
+    const prof = profissionais.find(
+      (p) => p.IDPROFISSIO === selectedProfissional
+    );
+    const proc = editedEvent?.procedimento?.DESCRPROC || "Procedimento";
+    const esp = getEspecialidadeNome(
+      editedEvent?.procedimento?.especialidades[0]?.IDESPEC
+    );
+    const nomeProf = prof?.pessoa?.NOMEPESSOA || "Profissional";
+    setTituloAgenda(`${proc} com ${esp} - ${nomeProf}`);
+  }, [selectedProfissional]);
 
-    api
-      .get<ProfissionalDTO[]>(`/especialidade/${specialty}/profissionais`)
-      .then((res) => setFilteredProfs(res.data))
-      .catch((err) => {
-        console.error("Erro ao carregar profissionais:", err);
-        setFilteredProfs([]); // fallback vazio
-      });
-  }, [editedEvent]);
-
-  /* ----------------------------- render ----------------------------- */
   return (
     <Modal transparent visible={visible} animationType="slide">
       <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -236,38 +245,32 @@ export default function EditAppointmentModal({
             <ScrollView contentContainerStyle={styles.inner}>
               <Text style={styles.modalTitle}>{tituloAgenda}</Text>
 
-              {/* -------- especialidade -------- */}
               <Text style={styles.label}>Especialidade</Text>
               <View style={[styles.pickerWrapper, { backgroundColor: "#eee" }]}>
-                <Picker enabled={false} selectedValue={specialty}>
+                <Picker enabled={false} selectedValue={firstEspecId}>
                   {especialidades.map((e) => (
                     <Picker.Item
-                      key={e.cod_especialidade}
-                      label={e.nome_especialidade}
-                      value={e.cod_especialidade}
+                      key={e.IDESPEC}
+                      label={e.DESCESPEC}
+                      value={e.IDESPEC}
                     />
                   ))}
                 </Picker>
               </View>
 
-              {/* -------- procedimento -------- */}
               <Text style={styles.label}>Procedimento</Text>
               <View style={[styles.pickerWrapper, { backgroundColor: "#eee" }]}>
-                <Picker
-                  enabled={false}
-                  selectedValue={editedEvent.id_procedimento}
-                >
+                <Picker enabled={false} selectedValue={editedEvent.ID_PROCED}>
                   {procs.map((p) => (
                     <Picker.Item
-                      key={p.id_procedimento}
-                      label={p.procedimento}
-                      value={p.id_procedimento}
+                      key={p.IDPROCED}
+                      label={p.DESCRPROC}
+                      value={p.IDPROCED}
                     />
                   ))}
                 </Picker>
               </View>
 
-              {/* -------- profissional -------- */}
               <Text style={[styles.label, { marginTop: 12 }]}>
                 Profissional Responsável
               </Text>
@@ -276,43 +279,40 @@ export default function EditAppointmentModal({
                   selectedValue={selectedProfissional}
                   onValueChange={(id) => {
                     setSelectedProfissional(id);
-                    const prof = filteredProfs.find(
-                      (p) => p.id_profissional === id
+                    const prof = profissionais.find(
+                      (p) => p.IDPROFISSIO === id
                     );
                     if (prof) {
-                      const proc = editedEvent.procedimento.procedimento;
+                      const proc = editedEvent.procedimento.DESCRPROC;
                       const esp =
-                        editedEvent.procedimento.especialidade
-                          .nome_especialidade;
+                        editedEvent.procedimento.especialidades[0].DESCESPEC;
                       setTituloAgenda(
-                        `${proc} com ${esp} - ${prof.nome_profissional}`
+                        `${proc} com ${esp} - ${prof.pessoa.NOMEPESSOA}`
                       );
                     }
                   }}
                 >
-                  {filteredProfs.map((p) => (
+                  {profissionais.map((p) => (
                     <Picker.Item
-                      key={p.id_profissional}
-                      label={p.nome_profissional}
-                      value={p.id_profissional}
+                      key={p.IDPROFISSIO}
+                      label={p.pessoa.NOMEPESSOA}
+                      value={p.IDPROFISSIO}
                     />
                   ))}
                 </Picker>
               </View>
+              <Text style={[styles.label, { marginTop: 12 }]}>Início</Text>
+              <TouchableOpacity
+                style={styles.dateTimeInput}
+                onPress={() =>
+                  Platform.OS === "android"
+                    ? openAndroidPicker("start")
+                    : setShowStartIOS(true)
+                }
+              >
+                <Text>{fmt(startDate)}</Text>
+              </TouchableOpacity>
 
-              {/* -------- descrição -------- */}
-              <Text style={[styles.label, { marginTop: 12 }]}>
-                Descrição Complementar
-              </Text>
-              <TextInput
-                style={[styles.textArea, { height: 80 }]}
-                multiline
-                value={descComplementar}
-                onChangeText={setDescComplementar}
-                placeholder="Digite a descrição complementar"
-              />
-
-              {/* -------- collapse -------- */}
               <TouchableOpacity
                 style={styles.collapseButton}
                 onPress={() => setCollapsed((c) => !c)}
@@ -324,47 +324,19 @@ export default function EditAppointmentModal({
 
               {!collapsed && (
                 <>
-                  {/* ---- início ---- */}
-                  <Text style={[styles.label, { marginTop: 12 }]}>Início</Text>
-                  <TouchableOpacity
-                    style={styles.dateTimeInput}
-                    onPress={() =>
-                      Platform.OS === "android"
-                        ? openAndroidPicker("start")
-                        : setShowStartIOS(true)
-                    }
-                  >
-                    <Text>{fmt(startDate)}</Text>
-                  </TouchableOpacity>
-
-                  {/* ---- término ---- */}
-                  <Text style={[styles.label, { marginTop: 12 }]}>Término</Text>
-                  <TouchableOpacity
-                    style={styles.dateTimeInput}
-                    onPress={() =>
-                      Platform.OS === "android"
-                        ? openAndroidPicker("end")
-                        : setShowEndIOS(true)
-                    }
-                  >
-                    <Text>{fmt(endDate)}</Text>
-                  </TouchableOpacity>
-
-                  {/* ---- transporte ---- */}
-                  <View style={styles.transportRow}>
-                    <Text style={styles.label}>Precisa de transporte?</Text>
-                    <Switch
-                      value={needsTransport}
-                      onValueChange={setNeedsTransport}
-                    />
-                  </View>
-                  <Text style={styles.smallNote}>
-                    *Se não precisar, deixe desmarcado.
+                  <Text style={[styles.label, { marginTop: 12 }]}>
+                    Descrição Complementar
                   </Text>
+                  <TextInput
+                    style={[styles.textArea, { height: 80 }]}
+                    multiline
+                    value={descComplementar}
+                    onChangeText={setDescComplementar}
+                    placeholder="Digite a descrição complementar"
+                  />
                 </>
               )}
 
-              {/* -------- rodapé -------- */}
               <View style={styles.footerRow}>
                 <View style={{ flex: 1, marginRight: 4 }}>
                   <Button
@@ -376,7 +348,7 @@ export default function EditAppointmentModal({
                         {
                           text: "Apagar",
                           style: "destructive",
-                          onPress: () => onDelete(editedEvent.id_agenda),
+                          onPress: () => onDelete(editedEvent.IDAGENDA),
                         },
                       ])
                     }
@@ -387,7 +359,6 @@ export default function EditAppointmentModal({
                 </View>
               </View>
 
-              {/* -------- fechar -------- */}
               <View style={{ marginTop: 16 }}>
                 <Button title="Fechar" color="#555" onPress={onClose} />
               </View>
@@ -396,26 +367,16 @@ export default function EditAppointmentModal({
         </View>
       </TouchableWithoutFeedback>
 
-      {/* -------- pickers iOS -------- */}
       {Platform.OS === "ios" && showStartIOS && (
         <View style={styles.iosPickerContainer}>
           <IOSPicker value={startDate} type="start" />
           <Button title="OK" onPress={() => setShowStartIOS(false)} />
         </View>
       )}
-      {Platform.OS === "ios" && showEndIOS && (
-        <View style={styles.iosPickerContainer}>
-          <IOSPicker value={endDate} type="end" />
-          <Button title="OK" onPress={() => setShowEndIOS(false)} />
-        </View>
-      )}
     </Modal>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/* Styles                                                             */
-/* ------------------------------------------------------------------ */
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
@@ -465,12 +426,6 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopWidth: 1,
     borderColor: "#ccc",
-  },
-  transportRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginTop: 12,
-    justifyContent: "space-between",
   },
   smallNote: { fontSize: 12, color: "#666", marginTop: 4 },
   footerRow: { flexDirection: "row", marginTop: 24 },

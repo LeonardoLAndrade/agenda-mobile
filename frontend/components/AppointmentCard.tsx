@@ -3,7 +3,6 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 type Props = {
   dataInicio: string;
-  dataFim: string;
   procedimento: string;
   profissional: string;
   especialidade: string;
@@ -12,7 +11,6 @@ type Props = {
 
 export default function AppointmentCard({
   dataInicio,
-  dataFim,
   procedimento,
   profissional,
   especialidade,
@@ -21,13 +19,14 @@ export default function AppointmentCard({
   return (
     <View style={styles.card}>
       <View style={styles.content}>
-        <Text style={styles.time}>
-          {dataInicio} - {dataFim}
-        </Text>
+        <Text style={styles.time}>{dataInicio}</Text>
         <Text style={styles.label}>
-          {especialidade.toUpperCase()} - {profissional.toUpperCase()}
+          {(especialidade || "Especialidade").toUpperCase()} -{" "}
+          {(profissional || "Profissional").toUpperCase()}
         </Text>
-        <Text style={styles.procedimento}>{procedimento.toUpperCase()}</Text>
+        <Text style={styles.procedimento}>
+          {(procedimento || "Procedimento").toUpperCase()}
+        </Text>
       </View>
       <TouchableOpacity onPress={onEdit} style={styles.editButton}>
         <Text style={styles.edit}>Editar</Text>
