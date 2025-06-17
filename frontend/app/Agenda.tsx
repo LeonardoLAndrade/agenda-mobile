@@ -21,6 +21,8 @@ import EditAppointmentModal, {
   ProfissionalDTO,
 } from "@/components/EditAppointmentModal";
 import CreateAppointmentForm from "@/components/CreateAppointmentForm";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function ScheduleScreen() {
   const MAX_DOTS = 3;
@@ -53,9 +55,9 @@ export default function ScheduleScreen() {
       .catch(console.error);
   }, [eventos]);
 
-  /*   useEffect(() => {
-    console.log("profissionais carregados:", profissionais);
-  }, [profissionais]); */
+  /* useEffect(() => {
+    console.log("eventos carregados:", eventos);
+  }, [eventos]); */
 
   const eventosWithColor = eventos.map((ev) => ({
     ...ev,
@@ -109,15 +111,15 @@ export default function ScheduleScreen() {
 
   const handleDelete = (id: number) => {
     api
-      .delete(`/agenda/${id}`)
+      .put(`/agenda/${id}/delete`, { SITUAGEN: 3 })
       .then(() => {
         setEventos((prev) => prev.filter((e) => e.IDAGENDA !== id));
         handleClose();
-        Alert.alert("Removido", "Agendamento excluído com sucesso.");
+        Alert.alert("Removido", "Agendamento cancelado com sucesso.");
       })
       .catch((err) => {
-        console.error("Erro ao excluir:", err);
-        Alert.alert("Erro", "Não foi possível excluir.");
+        console.error("Erro ao cancelar:", err);
+        Alert.alert("Erro", "Não foi possível cancelar.");
       });
   };
 
@@ -164,10 +166,14 @@ export default function ScheduleScreen() {
               filteredEventos.map((ev) => (
                 <AppointmentCard
                   key={ev.IDAGENDA}
-                  dataInicio={ev.DATAABERT?.slice(11, 16)}
+                  dataInicio={format(new Date(ev.DATAABERT), "HH:mm", {
+                    locale: ptBR,
+                  })}
                   procedimento={ev.procedimento?.DESCRPROC}
                   profissional={ev.profissional?.pessoa?.NOMEPESSOA}
-                  especialidade={ev.procedimento?.especialidades?.[0].DESCESPEC}
+                  especialidade={
+                    ev.procedimento?.especialidades?.[0]?.DESCESPEC
+                  }
                   onEdit={() => handleEdit(ev)}
                 />
               ))

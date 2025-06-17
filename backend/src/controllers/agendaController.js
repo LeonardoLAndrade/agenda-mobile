@@ -1,3 +1,4 @@
+const { Op } = require("sequelize");
 const {
   Agenda,
   Profissional,
@@ -20,6 +21,11 @@ exports.Insert = (req, res, next) => {
 exports.SearchAll = async (req, res, next) => {
   try {
     const agendas = await Agenda.findAll({
+      where: {
+        SITUAGEN: {
+          [Op.ne]: 3,
+        },
+      },
       include: [
         {
           model: Profissional,
@@ -95,12 +101,18 @@ exports.SearchOne = (req, res, next) => {
 // Atualizar um agendamento
 exports.Update = (req, res, next) => {
   const id_agenda = req.params.id;
-  const { ID_PROCED, ID_PROFISSIO, DATAABERT, SITUAGEN } = req.body;
+  const { ID_PROCED, ID_PROFISSIO, DATANOVA, DESCRCOMP, SITUAGEN } = req.body;
 
   Agenda.findByPk(id_agenda)
     .then((agenda) => {
       if (agenda) {
-        return agenda.update({ ID_PROCED, ID_PROFISSIO, DATAABERT, SITUAGEN });
+        return agenda.update({
+          ID_PROCED,
+          ID_PROFISSIO,
+          DESCRCOMP,
+          DATANOVA,
+          SITUAGEN,
+        });
       } else {
         return res.status(status.NOT_FOUND).send();
       }
@@ -112,14 +124,16 @@ exports.Update = (req, res, next) => {
 // Deletar agendamento
 exports.Delete = (req, res, next) => {
   const id_agenda = req.params.id;
+  const { SITUAGEN } = req.body;
 
   Agenda.findByPk(id_agenda)
     .then((agenda) => {
       if (agenda) {
-        return agenda.destroy().then(() => res.status(status.OK).send());
+        return agenda.update({ SITUAGEN });
       } else {
         return res.status(status.NOT_FOUND).send();
       }
     })
+    .then(() => res.status(status.OK).send())
     .catch((error) => next(error));
 };

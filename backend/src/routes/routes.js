@@ -21,9 +21,9 @@ router.get(
 
 router.post("/agenda", AgendaController.Insert);
 router.get("/agenda", AgendaController.SearchAll);
+router.put("/agenda/:id/delete", AgendaController.Delete);
 router.get("/agenda/:id", AgendaController.SearchOne);
 router.put("/agenda/:id", AgendaController.Update);
-router.delete("/agenda/:id", AgendaController.Delete);
 
 // Endpoints para obter dados
 router.get("/especialidades", dataController.getEspecialidades);

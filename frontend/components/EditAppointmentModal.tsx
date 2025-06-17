@@ -26,7 +26,6 @@ export type EditedEvent = {
   IDAGENDA: number;
   ID_PROFISSIO: number;
   ID_PROCED: number;
-  titulo_agenda: string;
   profissional: {
     IDPROFISSIO: number;
     especialidade: { IDESPEC: number; DESCESPEC: string };
@@ -42,10 +41,11 @@ export type EditedEvent = {
       }
     ];
   };
-  DESCRICAO: string;
+  DESCRCOMP: string;
+  DATANOVA: string | null;
   DATAABERT: string;
-  DATAFIM: string;
   SITUAGEN: boolean;
+  MOTCANC: string;
 };
 
 export type Especialidade = {
@@ -103,12 +103,11 @@ export default function EditAppointmentModal({
     editedEvent.ID_PROFISSIO
   );
   const [descComplementar, setDescComplementar] = useState(
-    editedEvent.DESCRICAO
+    editedEvent.DESCRCOMP
   );
   const [startDate, setStartDate] = useState<Date>(
     new Date(editedEvent.DATAABERT)
   );
-  const [endDate, setEndDate] = useState<Date>(new Date(editedEvent.DATAFIM));
   const [collapsed, setCollapsed] = useState(true);
   // const [filteredProfs, setFilteredProfs] = useState<ProfissionalDTO[]>([]);
 
@@ -128,21 +127,13 @@ export default function EditAppointmentModal({
     return `${proc} com ${esp} - ${prof}`;
   });
 
-  const adjustEnd = (s: Date, e: Date) =>
-    s >= e ? new Date(s.getTime() + 30 * 60_000) : e;
-
-  const handleDateTimeChange = (type: "start" | "end", newDate: Date) => {
-    if (type === "start") {
-      setStartDate(newDate);
-      setEndDate(adjustEnd(newDate, endDate));
-    } else {
-      setEndDate(adjustEnd(startDate, newDate));
-    }
+  const handleDateTimeChange = (newDate: Date) => {
+    setStartDate(newDate);
   };
 
-  const openAndroidPicker = (type: "start" | "end") => {
-    const current = type === "start" ? startDate : endDate;
-    const minDate = type === "start" ? new Date() : startDate;
+  const openAndroidPicker = () => {
+    const current = startDate;
+    const minDate = new Date();
 
     DateTimePickerAndroid.open({
       value: current,
@@ -164,26 +155,20 @@ export default function EditAppointmentModal({
               tp.getHours(),
               tp.getMinutes()
             );
-            handleDateTimeChange(type, composed);
+            handleDateTimeChange(composed);
           },
         });
       },
     });
   };
 
-  const IOSPicker = ({
-    value,
-    type,
-  }: {
-    value: Date;
-    type: "start" | "end";
-  }) => (
+  const IOSPicker = ({ value }: { value: Date }) => (
     <DateTimePicker
       value={value}
       mode="datetime"
       display="spinner"
-      onChange={(_, d) => d && handleDateTimeChange(type, d)}
-      minimumDate={type === "start" ? new Date() : startDate}
+      onChange={(_, d) => d && handleDateTimeChange(d)}
+      minimumDate={new Date()}
     />
   );
 
@@ -198,9 +183,11 @@ export default function EditAppointmentModal({
     const updated: EditedEvent = {
       ...editedEvent,
       ID_PROFISSIO: selectedProfissional,
-      DESCRICAO: descComplementar,
-      DATAABERT: toMysqlString(startDate),
-      DATAFIM: toMysqlString(endDate),
+      DESCRCOMP: descComplementar,
+      DATANOVA:
+        startDate.getTime() === new Date(editedEvent.DATAABERT).getTime()
+          ? null
+          : toMysqlString(startDate),
     };
     onSave(updated);
   };
@@ -306,7 +293,7 @@ export default function EditAppointmentModal({
                 style={styles.dateTimeInput}
                 onPress={() =>
                   Platform.OS === "android"
-                    ? openAndroidPicker("start")
+                    ? openAndroidPicker()
                     : setShowStartIOS(true)
                 }
               >
@@ -340,13 +327,13 @@ export default function EditAppointmentModal({
               <View style={styles.footerRow}>
                 <View style={{ flex: 1, marginRight: 4 }}>
                   <Button
-                    title="Apagar"
+                    title="Cancelar"
                     color="#C0392B"
                     onPress={() =>
-                      Alert.alert("Apagar Agendamento", "Tem certeza?", [
+                      Alert.alert("Cancelar Agendamento", "Tem certeza?", [
                         { text: "Cancelar", style: "cancel" },
                         {
-                          text: "Apagar",
+                          text: "Cancelar",
                           style: "destructive",
                           onPress: () => onDelete(editedEvent.IDAGENDA),
                         },
@@ -369,7 +356,7 @@ export default function EditAppointmentModal({
 
       {Platform.OS === "ios" && showStartIOS && (
         <View style={styles.iosPickerContainer}>
-          <IOSPicker value={startDate} type="start" />
+          <IOSPicker value={startDate} />
           <Button title="OK" onPress={() => setShowStartIOS(false)} />
         </View>
       )}
