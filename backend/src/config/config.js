@@ -1,7 +1,7 @@
 module.exports = {
   development: {
     database: {
-      host: "127.0.0.1",
+      host: "160.20.22.99",
       port: "3360",
       user: "aluno14",
       password: "/ud8ZNsXXvY=",

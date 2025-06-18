@@ -18,28 +18,16 @@ import {
   AndroidNativeProps,
 } from "@react-native-community/datetimepicker";
 import api from "../../frontend/src/services/api";
-
-interface Especialidade {
-  cod_especialidade: string;
-  nome_especialidade: string;
-}
-
-interface Procedimento {
-  id_procedimento: number;
-  procedimento: string;
-  cod_especialidade: string;
-}
-
-interface Profissional {
-  id_profissional: number;
-  nome_profissional: string;
-  cod_especialidade: string;
-}
+import {
+  Especialidade,
+  ProcedimentoDTO,
+  ProfissionalDTO,
+} from "./EditAppointmentModal";
 
 export default function CreateAppointmentForm() {
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
-  const [procedimentos, setProcedimentos] = useState<Procedimento[]>([]);
-  const [profissionais, setProfissionais] = useState<Profissional[]>([]);
+  const [procedimentos, setProcedimentos] = useState<ProcedimentoDTO[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalDTO[]>([]);
 
   const [selectedEspecialidade, setSelectedEspecialidade] = useState<
     string | null
@@ -54,7 +42,6 @@ export default function CreateAppointmentForm() {
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [descricao, setDescricao] = useState("");
-  const [transporte, setTransporte] = useState(false);
 
   const [titulo, setTitulo] = useState("Título gerado automaticamente");
   const [showForm, setShowForm] = useState(false);
@@ -78,32 +65,28 @@ export default function CreateAppointmentForm() {
   };
 
   const onSelectProcedimento = (id: number) => {
-    const proc = procedimentos.find((p) => p.id_procedimento === id);
+    const proc = procedimentos.find((p) => p.IDPROCED === id);
     if (!proc) return;
     setSelectedProcedimento(id);
   };
 
   const onSelectProfissional = (id: number) => {
-    const prof = profissionais.find((p) => p.id_profissional === id);
+    const prof = profissionais.find((p) => p.IDPROFISSIO === id);
     if (!prof) return;
     setSelectedProfissional(id);
   };
 
   useEffect(() => {
-    const proc = procedimentos.find(
-      (p) => p.id_procedimento === selectedProcedimento
-    );
+    const proc = procedimentos.find((p) => p.IDPROCED === selectedProcedimento);
     const esp = especialidades.find(
-      (e) => e.cod_especialidade === selectedEspecialidade
+      (e) => e.IDESPEC.toString() === selectedEspecialidade
     );
     const prof = profissionais.find(
-      (p) => p.id_profissional === selectedProfissional
+      (p) => p.IDPROFISSIO === selectedProfissional
     );
 
     if (proc && esp && prof) {
-      setTitulo(
-        `${proc.procedimento} com ${esp.nome_especialidade} - ${prof.nome_profissional}`
-      );
+      setTitulo(`${proc.DESCRPROC} com ${esp.DESCESPEC} - ${prof.NOMEPESSOA}`);
     } else {
       setTitulo("Título gerado automaticamente");
     }
@@ -142,6 +125,15 @@ export default function CreateAppointmentForm() {
     });
   };
 
+  const handleCancel = () => {
+    setShowForm(false);
+    setSelectedEspecialidade(null);
+    setSelectedProcedimento(null);
+    setSelectedProfissional(null);
+    setStartDate(new Date());
+    setDescricao("");
+  };
+
   const handleSubmit = () => {
     if (
       !selectedEspecialidade ||
@@ -153,13 +145,10 @@ export default function CreateAppointmentForm() {
     }
 
     const payload = {
-      titulo_agenda: titulo,
-      id_procedimento: selectedProcedimento,
-      id_profissional: selectedProfissional,
-      data_inicio: toMysqlString(startDate),
-      data_fim: toMysqlString(endDate),
-      descricao_complementar: descricao,
-      transporte: transporte,
+      IDPROCED: selectedProcedimento,
+      IDPROFISSIO: selectedProfissional,
+      DATAABERT: toMysqlString(startDate),
+      DESCRCOMP: descricao,
     };
 
     api
@@ -177,7 +166,6 @@ export default function CreateAppointmentForm() {
     setSelectedProcedimento(null);
     setSelectedProfissional(null);
     setStartDate(new Date());
-    setEndDate(new Date());
     setDescricao("");
   };
 
@@ -206,9 +194,9 @@ export default function CreateAppointmentForm() {
               <Picker.Item label="Selecione" value={null} />
               {especialidades.map((e) => (
                 <Picker.Item
-                  key={e.cod_especialidade}
-                  label={e.nome_especialidade}
-                  value={e.cod_especialidade}
+                  key={e.IDESPEC}
+                  label={e.DESCESPEC}
+                  value={e.IDESPEC}
                 />
               ))}
             </Picker>
@@ -225,9 +213,9 @@ export default function CreateAppointmentForm() {
               <Picker.Item label="Selecione" value={null} />
               {procedimentos.map((p) => (
                 <Picker.Item
-                  key={p.id_procedimento}
-                  label={p.procedimento}
-                  value={p.id_procedimento}
+                  key={p.IDPROCED}
+                  label={p.DESCRPROC}
+                  value={p.IDPROCED}
                 />
               ))}
             </Picker>
@@ -244,9 +232,9 @@ export default function CreateAppointmentForm() {
               <Picker.Item label="Selecione" value={null} />
               {profissionais.map((p) => (
                 <Picker.Item
-                  key={p.id_profissional}
-                  label={p.nome_profissional}
-                  value={p.id_profissional}
+                  key={p.IDPROFISSIO}
+                  label={p.NOMEPESSOA}
+                  value={p.IDPROFISSIO}
                 />
               ))}
             </Picker>
@@ -260,14 +248,6 @@ export default function CreateAppointmentForm() {
             <Text>{startDate.toLocaleString()}</Text>
           </TouchableOpacity>
 
-          <Text style={styles.label}>Término</Text>
-          <TouchableOpacity
-            onPress={() => showPicker("end")}
-            style={styles.input}
-          >
-            <Text>{endDate.toLocaleString()}</Text>
-          </TouchableOpacity>
-
           <Text style={styles.label}>Descrição Complementar</Text>
           <TextInput
             style={[styles.input, { height: 80 }]}
@@ -277,11 +257,6 @@ export default function CreateAppointmentForm() {
             placeholder="Digite a descrição do evento"
           />
 
-          <View style={styles.switchRow}>
-            <Text style={styles.label}>Precisa de Transporte?</Text>
-            <Switch value={transporte} onValueChange={setTransporte} />
-          </View>
-
           <TouchableOpacity
             style={[styles.button, styles.saveButton]}
             onPress={handleSubmit}
@@ -290,7 +265,7 @@ export default function CreateAppointmentForm() {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.button, styles.cancelButton]}
-            onPress={() => setShowForm(false)}
+            onPress={handleCancel}
           >
             <Text style={styles.buttonText}>CANCELAR</Text>
           </TouchableOpacity>

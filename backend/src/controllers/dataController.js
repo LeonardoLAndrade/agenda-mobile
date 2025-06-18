@@ -33,7 +33,7 @@ exports.getProcedimentos = async (req, res, next) => {
 };
 
 exports.getProcedimentosPorEspecialidade = (req, res, next) => {
-  const idEspecialidade = req.params.id;
+  const idEspecialidade = req.params.especialidadeId;
 
   EspecProced.findAll({
     where: { ID_ESPEC: idEspecialidade },
@@ -43,7 +43,9 @@ exports.getProcedimentosPorEspecialidade = (req, res, next) => {
       const procedimentos = result.map((r) => r.procedimento);
       res.status(status.OK).send(procedimentos);
     })
-    .catch((error) => next(error));
+    .catch((error) => {
+      next(error);
+    });
 };
 
 exports.getProfissionais = (req, res, next) => {
@@ -55,7 +57,7 @@ exports.getProfissionais = (req, res, next) => {
 };
 
 exports.getProfissionaisPorEspecialidade = (req, res, next) => {
-  const idEspecialidade = req.params.id;
+  const idEspecialidade = req.params.especialidadeId;
 
   Profissional.findAll({
     include: [{ model: PessoaFisica, as: "pessoa" }],

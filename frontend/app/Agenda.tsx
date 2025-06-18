@@ -61,7 +61,9 @@ export default function ScheduleScreen() {
 
   const eventosWithColor = eventos.map((ev) => ({
     ...ev,
-    color: stringToHslColor(ev.profissional?.especialidade?.DESCESPEC || ""),
+    color: stringToHslColor(
+      ev.procedimento?.especialidades?.[0]?.DESCESPEC || ""
+    ),
   }));
 
   const grouped = eventosWithColor.reduce((acc, ev) => {

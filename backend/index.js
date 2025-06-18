@@ -27,7 +27,7 @@ const syncDatabase = async () => {
     const port = 3003;
     app.set("port", port);
     const server = http.createServer(app);
-    server.listen(port, () => {
+    server.listen(port, "0.0.0.0", () => {
       console.log(`Servidor rodando na porta ${port}`);
     });
   } catch (error) {
