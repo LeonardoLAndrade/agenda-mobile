@@ -16,7 +16,7 @@ const Agenda = sequelize.define(
     DATANOVA: DataTypes.DATE,
     DATAABERT: DataTypes.DATE,
     SITUAGEN: DataTypes.STRING,
-    MOTCANC: DataTypes.STRING,
+    MOTIALT: DataTypes.STRING,
   },
   {
     tableName: "AGENDA",

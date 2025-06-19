@@ -37,10 +37,7 @@ export default function ScheduleScreen() {
   const isNarrow = width < 600;
 
   useEffect(() => {
-    api
-      .get("/agenda")
-      .then((res) => setEventos(res.data))
-      .catch(console.error);
+    carregarEventos();
     api
       .get("/especialidades")
       .then((res) => setEspecialidades(res.data))
@@ -55,9 +52,14 @@ export default function ScheduleScreen() {
       .catch(console.error);
   }, [eventos]);
 
-  /* useEffect(() => {
-    console.log("eventos carregados:", eventos);
-  }, [eventos]); */
+  const carregarEventos = async () => {
+    try {
+      const response = await api.get("/agenda");
+      setEventos(response.data);
+    } catch (err) {
+      console.error("Erro ao carregar eventos:", err);
+    }
+  };
 
   const eventosWithColor = eventos.map((ev) => ({
     ...ev,
@@ -150,7 +152,7 @@ export default function ScheduleScreen() {
         <View
           style={isNarrow ? styles.listContainer : styles.sideListContainer}
         >
-          <CreateAppointmentForm />
+          <CreateAppointmentForm onHandleSubmit={carregarEventos} />
           {selectedDate ? (
             <>
               <DateHeader dateString={selectedDate} />
@@ -171,6 +173,13 @@ export default function ScheduleScreen() {
                   dataInicio={format(new Date(ev.DATAABERT), "HH:mm", {
                     locale: ptBR,
                   })}
+                  dataNova={
+                    ev.DATANOVA
+                      ? format(new Date(ev.DATANOVA), "HH:mm", {
+                          locale: ptBR,
+                        })
+                      : undefined
+                  }
                   procedimento={ev.procedimento?.DESCRPROC}
                   profissional={ev.profissional?.pessoa?.NOMEPESSOA}
                   especialidade={

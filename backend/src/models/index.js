@@ -1,11 +1,12 @@
 const sequelize = require("../database/database");
 
+const Agenda = require("./agenda");
 const Especialidade = require("./especialidade");
-const Procedimento = require("./procedimento");
 const EspecProced = require("./especproced");
 const PessoaFisica = require("./pessoafis");
+const Procedimento = require("./procedimento");
+const ProfiEspec = require("./profiespec");
 const Profissional = require("./profissional");
-const Agenda = require("./agenda");
 
 // ──────────────── RELACIONAMENTOS ──────────────── //
 
@@ -19,6 +20,12 @@ Agenda.belongsTo(Profissional, {
 Agenda.belongsTo(Procedimento, {
   foreignKey: "ID_PROCED",
   as: "procedimento",
+});
+
+// AGENDA → PESSOAFIS (via ID_PESSOAFIS)
+Agenda.belongsTo(PessoaFisica, {
+  foreignKey: "ID_PESSOAFIS",
+  as: "pessoaFisAgenda",
 });
 
 // PROFISSIONAL → PESSOAFIS
@@ -63,6 +70,19 @@ EspecProced.belongsTo(Procedimento, {
   as: "procedimento",
 });
 
+Profissional.belongsToMany(Especialidade, {
+  through: ProfiEspec,
+  foreignKey: "ID_PROFISSIO",
+  otherKey: "ID_ESPEC",
+  as: "especialidadesProfissional",
+});
+
+Especialidade.belongsToMany(Profissional, {
+  through: ProfiEspec,
+  foreignKey: "ID_ESPEC",
+  otherKey: "ID_PROFISSIO",
+  as: "profissionais",
+});
 // ──────────────── EXPORT ──────────────── //
 
 module.exports = {

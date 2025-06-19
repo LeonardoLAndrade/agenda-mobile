@@ -32,6 +32,12 @@ exports.getProcedimentos = async (req, res, next) => {
   }
 };
 
+exports.getPessoaFis = async (req, res, next) => {
+  PessoaFisica.findAll()
+    .then((pessoas) => res.status(status.OK).send(pessoas))
+    .catch((error) => next(error));
+};
+
 exports.getProcedimentosPorEspecialidade = (req, res, next) => {
   const idEspecialidade = req.params.especialidadeId;
 
@@ -60,8 +66,22 @@ exports.getProfissionaisPorEspecialidade = (req, res, next) => {
   const idEspecialidade = req.params.especialidadeId;
 
   Profissional.findAll({
-    include: [{ model: PessoaFisica, as: "pessoa" }],
+    include: [
+      {
+        model: PessoaFisica,
+        as: "pessoa",
+        attributes: ["NOMEPESSOA"],
+      },
+      {
+        model: Especialidade,
+        as: "especialidadesProfissional",
+        where: { IDESPEC: idEspecialidade },
+        attributes: ["IDESPEC"],
+        through: { attributes: [] },
+      },
+    ],
+    attributes: ["IDPROFISSIO", "ID_PESSOAFIS"],
   })
-    .then((profissionais) => res.status(status.OK).send(profissionais))
+    .then((profissionais) => res.status(200).send(profissionais))
     .catch((error) => next(error));
 };

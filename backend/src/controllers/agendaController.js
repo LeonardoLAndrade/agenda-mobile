@@ -10,9 +10,10 @@ const status = require("http-status");
 
 // Inserir novo agendamento
 exports.Insert = (req, res, next) => {
-  const { ID_PROCED, ID_PROFISSIO, DATAABERT, SITUAGEN } = req.body;
+  const { ID_PROCED, ID_PESSOAFIS, ID_PROFISSIO, DATAABERT, DESCRCOMP } =
+    req.body;
 
-  Agenda.create({ ID_PROCED, ID_PROFISSIO, DATAABERT, SITUAGEN })
+  Agenda.create({ ID_PROCED, ID_PESSOAFIS, ID_PROFISSIO, DATAABERT, DESCRCOMP })
     .then((agenda) => res.status(status.OK).send(agenda))
     .catch((error) => next(error));
 };
@@ -27,6 +28,11 @@ exports.SearchAll = async (req, res, next) => {
         },
       },
       include: [
+        {
+          model: PessoaFisica,
+          as: "pessoaFisAgenda",
+          attributes: ["NOMEPESSOA"],
+        },
         {
           model: Profissional,
           as: "profissional",
@@ -101,7 +107,7 @@ exports.SearchOne = (req, res, next) => {
 // Atualizar um agendamento
 exports.Update = (req, res, next) => {
   const id_agenda = req.params.id;
-  const { ID_PROCED, ID_PROFISSIO, DATANOVA, DESCRCOMP, SITUAGEN } = req.body;
+  const { ID_PROCED, ID_PROFISSIO, DATAABERT, DESCRCOMP, SITUAGEN } = req.body;
 
   Agenda.findByPk(id_agenda)
     .then((agenda) => {
@@ -110,7 +116,7 @@ exports.Update = (req, res, next) => {
           ID_PROCED,
           ID_PROFISSIO,
           DESCRCOMP,
-          DATANOVA,
+          DATAABERT,
           SITUAGEN,
         });
       } else {

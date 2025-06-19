@@ -7,7 +7,6 @@ import {
   StyleSheet,
   TouchableOpacity,
   TextInput,
-  Switch,
   Button,
   Platform,
   TouchableWithoutFeedback,
@@ -20,12 +19,16 @@ import DateTimePicker, {
   DateTimePickerAndroid,
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import api from "../src/services/api";
+import api from "@/src/services/api";
 
 export type EditedEvent = {
   IDAGENDA: number;
+  ID_PESSOAFIS: number;
   ID_PROFISSIO: number;
   ID_PROCED: number;
+  pessoaFisAgenda: {
+    NOMEPESSOA: string;
+  };
   profissional: {
     IDPROFISSIO: number;
     especialidade: { IDESPEC: number; DESCESPEC: string };
@@ -45,7 +48,7 @@ export type EditedEvent = {
   DATANOVA: string | null;
   DATAABERT: string;
   SITUAGEN: boolean;
-  MOTCANC: string;
+  MOTIALT: string;
 };
 
 export type Especialidade = {
@@ -68,6 +71,22 @@ export type ProfissionalDTO = {
   pessoa: {
     NOMEPESSOA: string;
   };
+};
+
+export type ProfiEspec = {
+  IDPROFISSIO: number;
+  especialidade: {
+    IDESPEC: number;
+    DESCESPEC: string;
+  };
+  pessoa: {
+    NOMEPESSOA: string;
+  };
+};
+
+export type PessoaFis = {
+  IDPESSOAFIS: number;
+  NOMEPESSOA: string;
 };
 
 type Props = {
@@ -109,7 +128,7 @@ export default function EditAppointmentModal({
     new Date(editedEvent.DATAABERT)
   );
   const [collapsed, setCollapsed] = useState(true);
-  // const [filteredProfs, setFilteredProfs] = useState<ProfissionalDTO[]>([]);
+  const [filteredProfs, setFilteredProfs] = useState<ProfiEspec[]>([]);
 
   const getEspecialidadeNome = (id: number): string => {
     return (
@@ -184,10 +203,7 @@ export default function EditAppointmentModal({
       ...editedEvent,
       ID_PROFISSIO: selectedProfissional,
       DESCRCOMP: descComplementar,
-      DATANOVA:
-        startDate.getTime() === new Date(editedEvent.DATAABERT).getTime()
-          ? null
-          : toMysqlString(startDate),
+      DATAABERT: toMysqlString(startDate),
     };
     onSave(updated);
   };
@@ -199,18 +215,18 @@ export default function EditAppointmentModal({
 
   // procedimentos.map((p) => console.log(p));
 
-  // useEffect(() => {
-  //   const specialty = editedEvent.procedimento.especialidades[0].IDESPEC;
-  //   if (!specialty) return;
+  useEffect(() => {
+    const specialty = editedEvent.procedimento.especialidades[0].IDESPEC;
+    if (!specialty) return;
 
-  //   api
-  //     .get<ProfissionalDTO[]>(`/especialidade/${specialty}/profissionais`)
-  //     .then((res) => setFilteredProfs(res.data))
-  //     .catch((err) => {
-  //       console.error("Erro ao carregar profissionais:", err);
-  //       setFilteredProfs([]);
-  //     });
-  // }, [editedEvent]);
+    api
+      .get<ProfiEspec[]>(`/especialidade/${specialty}/profissionais`)
+      .then((res) => setFilteredProfs(res.data))
+      .catch((err) => {
+        console.error("Erro ao carregar profissionais:", err);
+        setFilteredProfs([]);
+      });
+  }, [editedEvent]);
 
   useEffect(() => {
     const prof = profissionais.find(
@@ -235,26 +251,41 @@ export default function EditAppointmentModal({
               <Text style={styles.label}>Especialidade</Text>
               <View style={[styles.pickerWrapper, { backgroundColor: "#eee" }]}>
                 <Picker enabled={false} selectedValue={firstEspecId}>
-                  {especialidades.map((e) => (
-                    <Picker.Item
-                      key={e.IDESPEC}
-                      label={e.DESCESPEC}
-                      value={e.IDESPEC}
-                    />
-                  ))}
+                  {especialidades
+                    .sort((a, b) => a.DESCESPEC.localeCompare(b.DESCESPEC))
+                    .map((e) => (
+                      <Picker.Item
+                        key={e.IDESPEC}
+                        label={e.DESCESPEC}
+                        value={e.IDESPEC}
+                      />
+                    ))}
                 </Picker>
               </View>
 
               <Text style={styles.label}>Procedimento</Text>
               <View style={[styles.pickerWrapper, { backgroundColor: "#eee" }]}>
                 <Picker enabled={false} selectedValue={editedEvent.ID_PROCED}>
-                  {procs.map((p) => (
-                    <Picker.Item
-                      key={p.IDPROCED}
-                      label={p.DESCRPROC}
-                      value={p.IDPROCED}
-                    />
-                  ))}
+                  {procs
+                    .sort((a, b) => a.DESCRPROC.localeCompare(b.DESCRPROC))
+                    .map((p) => (
+                      <Picker.Item
+                        key={p.IDPROCED}
+                        label={p.DESCRPROC}
+                        value={p.IDPROCED}
+                      />
+                    ))}
+                </Picker>
+              </View>
+
+              <Text style={styles.label}>Paciente</Text>
+              <View style={[styles.pickerWrapper, { backgroundColor: "#eee" }]}>
+                <Picker enabled={false} selectedValue={editedEvent.ID_PROCED}>
+                  <Picker.Item
+                    key={editedEvent.ID_PESSOAFIS}
+                    label={editedEvent.pessoaFisAgenda?.NOMEPESSOA}
+                    value={editedEvent.ID_PESSOAFIS}
+                  />
                 </Picker>
               </View>
 
@@ -279,13 +310,17 @@ export default function EditAppointmentModal({
                     }
                   }}
                 >
-                  {profissionais.map((p) => (
-                    <Picker.Item
-                      key={p.IDPROFISSIO}
-                      label={p.pessoa.NOMEPESSOA}
-                      value={p.IDPROFISSIO}
-                    />
-                  ))}
+                  {filteredProfs
+                    .sort((a, b) =>
+                      a.pessoa.NOMEPESSOA.localeCompare(b.pessoa.NOMEPESSOA)
+                    )
+                    .map((p) => (
+                      <Picker.Item
+                        key={p.IDPROFISSIO}
+                        label={p.pessoa.NOMEPESSOA}
+                        value={p.IDPROFISSIO}
+                      />
+                    ))}
                 </Picker>
               </View>
               <Text style={[styles.label, { marginTop: 12 }]}>Início</Text>
@@ -299,6 +334,12 @@ export default function EditAppointmentModal({
               >
                 <Text>{fmt(startDate)}</Text>
               </TouchableOpacity>
+              {editedEvent.DATANOVA && (
+                <Text style={styles.warning}>
+                  * Aguardando aprovação para troca de horário para{" "}
+                  {" " + fmt(new Date(editedEvent.DATANOVA))}
+                </Text>
+              )}
 
               <TouchableOpacity
                 style={styles.collapseButton}
@@ -415,5 +456,6 @@ const styles = StyleSheet.create({
     borderColor: "#ccc",
   },
   smallNote: { fontSize: 12, color: "#666", marginTop: 4 },
+  warning: { fontSize: 12, color: "#D9AB0C", marginTop: 4, fontWeight: "bold" },
   footerRow: { flexDirection: "row", marginTop: 24 },
 });

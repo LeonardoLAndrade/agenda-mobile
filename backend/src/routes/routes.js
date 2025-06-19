@@ -10,9 +10,6 @@ router.get(
   dataController.getProfissionaisPorEspecialidade
 );
 
-// Rota para buscar especialidades e procedimentos por profissional
-// router.get("/profissional/:profissionalId/especialidades", dataController.getEspecialidadesPorProfissional);
-
 // Rota para buscar procedimentos por especialidade
 router.get(
   "/especialidade/:especialidadeId/procedimentos",
@@ -28,6 +25,7 @@ router.put("/agenda/:id", AgendaController.Update);
 // Endpoints para obter dados
 router.get("/especialidades", dataController.getEspecialidades);
 router.get("/procedimentos", dataController.getProcedimentos);
+router.get("/pessoafis", dataController.getPessoaFis);
 // router.get("/ag_profissionais", dataController.getAgProfissionais);
 
 // Endpoints específicos de profissionais

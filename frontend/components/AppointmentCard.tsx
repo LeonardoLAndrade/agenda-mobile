@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 type Props = {
   dataInicio: string;
+  dataNova: string | undefined;
   procedimento: string;
   profissional: string;
   especialidade: string;
@@ -11,6 +12,7 @@ type Props = {
 
 export default function AppointmentCard({
   dataInicio,
+  dataNova,
   procedimento,
   profissional,
   especialidade,
@@ -19,7 +21,12 @@ export default function AppointmentCard({
   return (
     <View style={styles.card}>
       <View style={styles.content}>
-        <Text style={styles.time}>{dataInicio}</Text>
+        <Text style={styles.time}>
+          {dataInicio}
+          <Text style={styles.warning}>
+            {dataNova && `  Aguardando aprovação`}
+          </Text>
+        </Text>
         <Text style={styles.label}>
           {(especialidade || "Especialidade").toUpperCase()} -{" "}
           {(profissional || "Profissional").toUpperCase()}
@@ -79,4 +86,5 @@ const styles = StyleSheet.create({
     color: "#0066CC",
     fontWeight: "600",
   },
+  warning: { fontSize: 14, color: "#D9AB0C" },
 });

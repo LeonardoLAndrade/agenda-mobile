@@ -5,9 +5,7 @@ import {
   TextInput,
   Button,
   StyleSheet,
-  Platform,
   ScrollView,
-  Switch,
   TouchableOpacity,
   Modal,
   Alert,
@@ -20,21 +18,28 @@ import {
 import api from "../../frontend/src/services/api";
 import {
   Especialidade,
+  PessoaFis,
   ProcedimentoDTO,
-  ProfissionalDTO,
+  ProfiEspec,
 } from "./EditAppointmentModal";
 
-export default function CreateAppointmentForm() {
+type Props = {
+  onHandleSubmit: () => void;
+};
+
+export default function CreateAppointmentForm({ onHandleSubmit }: Props) {
   const [especialidades, setEspecialidades] = useState<Especialidade[]>([]);
   const [procedimentos, setProcedimentos] = useState<ProcedimentoDTO[]>([]);
-  const [profissionais, setProfissionais] = useState<ProfissionalDTO[]>([]);
+  const [pacientes, setPacientes] = useState<PessoaFis[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfiEspec[]>([]);
 
   const [selectedEspecialidade, setSelectedEspecialidade] = useState<
-    string | null
+    number | null
   >(null);
   const [selectedProcedimento, setSelectedProcedimento] = useState<
     number | null
   >(null);
+  const [selectedPaciente, setSelectedPaciente] = useState<number | null>(null);
   const [selectedProfissional, setSelectedProfissional] = useState<
     number | null
   >(null);
@@ -50,13 +55,17 @@ export default function CreateAppointmentForm() {
     api.get("/especialidades").then((res) => setEspecialidades(res.data));
   }, []);
 
-  const onSelectEspecialidade = (cod: string) => {
+  const onSelectEspecialidade = (cod: number | null) => {
     setSelectedEspecialidade(cod);
     setSelectedProcedimento(null);
     setSelectedProfissional(null);
 
     api.get(`/especialidade/${cod}/procedimentos`).then((res) => {
       setProcedimentos(res.data);
+    });
+
+    api.get(`/pessoafis`).then((res) => {
+      setPacientes(res.data);
     });
 
     api.get(`/especialidade/${cod}/profissionais`).then((res) => {
@@ -70,6 +79,12 @@ export default function CreateAppointmentForm() {
     setSelectedProcedimento(id);
   };
 
+  const onSelectPaciente = (id: number) => {
+    const pac = pacientes.find((p) => p.IDPESSOAFIS === id);
+    if (!pac) return;
+    setSelectedPaciente(id);
+  };
+
   const onSelectProfissional = (id: number) => {
     const prof = profissionais.find((p) => p.IDPROFISSIO === id);
     if (!prof) return;
@@ -78,15 +93,15 @@ export default function CreateAppointmentForm() {
 
   useEffect(() => {
     const proc = procedimentos.find((p) => p.IDPROCED === selectedProcedimento);
-    const esp = especialidades.find(
-      (e) => e.IDESPEC.toString() === selectedEspecialidade
-    );
+    const esp = especialidades.find((e) => e.IDESPEC === selectedEspecialidade);
     const prof = profissionais.find(
       (p) => p.IDPROFISSIO === selectedProfissional
     );
 
     if (proc && esp && prof) {
-      setTitulo(`${proc.DESCRPROC} com ${esp.DESCESPEC} - ${prof.NOMEPESSOA}`);
+      setTitulo(
+        `${proc.DESCRPROC} com ${esp.DESCESPEC} - ${prof.pessoa.NOMEPESSOA}`
+      );
     } else {
       setTitulo("Título gerado automaticamente");
     }
@@ -129,6 +144,7 @@ export default function CreateAppointmentForm() {
     setShowForm(false);
     setSelectedEspecialidade(null);
     setSelectedProcedimento(null);
+    setSelectedPaciente(null);
     setSelectedProfissional(null);
     setStartDate(new Date());
     setDescricao("");
@@ -138,6 +154,7 @@ export default function CreateAppointmentForm() {
     if (
       !selectedEspecialidade ||
       !selectedProcedimento ||
+      !selectedPaciente ||
       !selectedProfissional
     ) {
       Alert.alert("Alerta!", "Preencha todos os campos obrigatórios.");
@@ -145,8 +162,9 @@ export default function CreateAppointmentForm() {
     }
 
     const payload = {
-      IDPROCED: selectedProcedimento,
-      IDPROFISSIO: selectedProfissional,
+      ID_PROCED: selectedProcedimento,
+      ID_PESSOAFIS: selectedPaciente,
+      ID_PROFISSIO: selectedProfissional,
       DATAABERT: toMysqlString(startDate),
       DESCRCOMP: descricao,
     };
@@ -156,6 +174,7 @@ export default function CreateAppointmentForm() {
       .then(() => {
         Alert.alert("Sucesso!", "Agendamento criado com sucesso!");
         setShowForm(false);
+        onHandleSubmit();
       })
       .catch((err) => {
         console.error(err);
@@ -164,6 +183,7 @@ export default function CreateAppointmentForm() {
 
     setSelectedEspecialidade(null);
     setSelectedProcedimento(null);
+    setSelectedPaciente(null);
     setSelectedProfissional(null);
     setStartDate(new Date());
     setDescricao("");
@@ -181,24 +201,28 @@ export default function CreateAppointmentForm() {
         <ScrollView contentContainerStyle={styles.modalContent}>
           <Text style={styles.title}>Adicionar Evento</Text>
           <Text style={styles.label}>Título do Evento</Text>
-          <TextInput value={titulo} editable={false} style={styles.input} />
+          <TextInput
+            value={titulo}
+            editable={false}
+            style={[styles.input, styles.inputRead]}
+          />
 
           <Text style={styles.label}>Especialidade</Text>
           <View style={styles.pickerWrapper}>
             <Picker
               selectedValue={selectedEspecialidade}
-              onValueChange={(itemValue) =>
-                onSelectEspecialidade(itemValue as string)
-              }
+              onValueChange={(itemValue) => onSelectEspecialidade(itemValue)}
             >
               <Picker.Item label="Selecione" value={null} />
-              {especialidades.map((e) => (
-                <Picker.Item
-                  key={e.IDESPEC}
-                  label={e.DESCESPEC}
-                  value={e.IDESPEC}
-                />
-              ))}
+              {especialidades
+                .sort((a, b) => a.DESCESPEC.localeCompare(b.DESCESPEC))
+                .map((e) => (
+                  <Picker.Item
+                    key={e.IDESPEC}
+                    label={e.DESCESPEC}
+                    value={e.IDESPEC}
+                  />
+                ))}
             </Picker>
           </View>
 
@@ -211,13 +235,36 @@ export default function CreateAppointmentForm() {
               }
             >
               <Picker.Item label="Selecione" value={null} />
-              {procedimentos.map((p) => (
-                <Picker.Item
-                  key={p.IDPROCED}
-                  label={p.DESCRPROC}
-                  value={p.IDPROCED}
-                />
-              ))}
+              {procedimentos
+                .sort((a, b) => a.DESCRPROC.localeCompare(b.DESCRPROC))
+                .map((p) => (
+                  <Picker.Item
+                    key={p.IDPROCED}
+                    label={p.DESCRPROC}
+                    value={p.IDPROCED}
+                  />
+                ))}
+            </Picker>
+          </View>
+
+          <Text style={styles.label}>Paciente</Text>
+          <View style={styles.pickerWrapper}>
+            <Picker
+              selectedValue={selectedPaciente}
+              onValueChange={(itemValue) =>
+                onSelectPaciente(itemValue as number)
+              }
+            >
+              <Picker.Item label="Selecione" value={null} />
+              {pacientes
+                .sort((a, b) => a.NOMEPESSOA.localeCompare(b.NOMEPESSOA))
+                .map((p) => (
+                  <Picker.Item
+                    key={p.IDPESSOAFIS}
+                    label={p.NOMEPESSOA}
+                    value={p.IDPESSOAFIS}
+                  />
+                ))}
             </Picker>
           </View>
 
@@ -230,13 +277,17 @@ export default function CreateAppointmentForm() {
               }
             >
               <Picker.Item label="Selecione" value={null} />
-              {profissionais.map((p) => (
-                <Picker.Item
-                  key={p.IDPROFISSIO}
-                  label={p.NOMEPESSOA}
-                  value={p.IDPROFISSIO}
-                />
-              ))}
+              {profissionais
+                .sort((a, b) =>
+                  a.pessoa.NOMEPESSOA.localeCompare(b.pessoa.NOMEPESSOA)
+                )
+                .map((p) => (
+                  <Picker.Item
+                    key={p.IDPROFISSIO}
+                    label={p.pessoa.NOMEPESSOA}
+                    value={p.IDPROFISSIO}
+                  />
+                ))}
             </Picker>
           </View>
 
@@ -303,6 +354,9 @@ const styles = StyleSheet.create({
     padding: 10,
     marginTop: 4,
     backgroundColor: "#FFF",
+  },
+  inputRead: {
+    backgroundColor: "#eee",
   },
   pickerWrapper: {
     borderWidth: 1,
