@@ -167,6 +167,7 @@ export default function CreateAppointmentForm({ onHandleSubmit }: Props) {
       ID_PROFISSIO: selectedProfissional,
       DATAABERT: toMysqlString(startDate),
       DESCRCOMP: descricao,
+      SOLICMASTER: 1,
     };
 
     api

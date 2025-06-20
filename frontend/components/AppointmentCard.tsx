@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 type Props = {
   dataInicio: string;
   dataNova: string | undefined;
+  solicMaster: number;
   procedimento: string;
   profissional: string;
   especialidade: string;
@@ -13,6 +14,7 @@ type Props = {
 export default function AppointmentCard({
   dataInicio,
   dataNova,
+  solicMaster,
   procedimento,
   profissional,
   especialidade,
@@ -24,7 +26,7 @@ export default function AppointmentCard({
         <Text style={styles.time}>
           {dataInicio}
           <Text style={styles.warning}>
-            {dataNova && `  Aguardando aprovação`}
+            {dataNova && solicMaster === 0 && `  Aguardando aprovação`}
           </Text>
         </Text>
         <Text style={styles.label}>

@@ -98,6 +98,7 @@ export default function ScheduleScreen() {
   };
 
   const handleSave = (updated: EditedEvent) => {
+    updated = { ...updated, SOLICMASTER: 1 };
     api
       .put(`/agenda/${updated.IDAGENDA}`, updated)
       .then(() => {
@@ -115,7 +116,7 @@ export default function ScheduleScreen() {
 
   const handleDelete = (id: number) => {
     api
-      .put(`/agenda/${id}/delete`, { SITUAGEN: 3 })
+      .put(`/agenda/${id}/delete`, { SITUAGEN: 3, SOLICMASTER: 1 })
       .then(() => {
         setEventos((prev) => prev.filter((e) => e.IDAGENDA !== id));
         handleClose();
@@ -180,6 +181,7 @@ export default function ScheduleScreen() {
                         })
                       : undefined
                   }
+                  solicMaster={ev.SOLICMASTER}
                   procedimento={ev.procedimento?.DESCRPROC}
                   profissional={ev.profissional?.pessoa?.NOMEPESSOA}
                   especialidade={

@@ -18,6 +18,7 @@ router.get(
 
 router.post("/agenda", AgendaController.Insert);
 router.get("/agenda", AgendaController.SearchAll);
+router.get("/cancelados", AgendaController.SearchAllCanceleds);
 router.put("/agenda/:id/delete", AgendaController.Delete);
 router.get("/agenda/:id", AgendaController.SearchOne);
 router.put("/agenda/:id", AgendaController.Update);

@@ -44,10 +44,11 @@ export type EditedEvent = {
       }
     ];
   };
+  SOLICMASTER: number;
   DESCRCOMP: string;
   DATANOVA: string | null;
   DATAABERT: string;
-  SITUAGEN: boolean;
+  SITUAGEN: number;
   MOTIALT: string;
 };
 
@@ -204,6 +205,8 @@ export default function EditAppointmentModal({
       ID_PROFISSIO: selectedProfissional,
       DESCRCOMP: descComplementar,
       DATAABERT: toMysqlString(startDate),
+      DATANOVA: null,
+      SOLICMASTER: 1,
     };
     onSave(updated);
   };
@@ -334,7 +337,7 @@ export default function EditAppointmentModal({
               >
                 <Text>{fmt(startDate)}</Text>
               </TouchableOpacity>
-              {editedEvent.DATANOVA && (
+              {editedEvent.DATANOVA && editedEvent.SOLICMASTER === 0 && (
                 <Text style={styles.warning}>
                   * Aguardando aprovação para troca de horário para{" "}
                   {" " + fmt(new Date(editedEvent.DATANOVA))}

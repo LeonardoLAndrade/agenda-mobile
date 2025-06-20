@@ -12,6 +12,7 @@ const Agenda = sequelize.define(
     ID_PESSOAFIS: DataTypes.INTEGER,
     ID_PROFISSIO: DataTypes.INTEGER,
     ID_PROCED: DataTypes.INTEGER,
+    SOLICMASTER: DataTypes.TINYINT,
     DESCRCOMP: DataTypes.STRING,
     DATANOVA: DataTypes.DATE,
     DATAABERT: DataTypes.DATE,
