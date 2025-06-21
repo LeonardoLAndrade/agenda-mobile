@@ -1,19 +1,44 @@
-// app/_layout.tsx
-import React from "react";
-import { Drawer } from "expo-router/drawer";
-import Sidebar from "../components/Sidebar";
+import { Slot, Redirect, usePathname } from "expo-router";
+import { useEffect, useState } from "react";
+import { storage } from "@/src/utils/storage";
 
 export default function RootLayout() {
-  return (
-    <Drawer
-      drawerContent={() => <Sidebar />}
-      screenOptions={{ headerShown: false }}
-    >
-      <Drawer.Screen name="initial" options={{ title: "Inicial" }} />
-      <Drawer.Screen name="login" options={{ title: "Login" }} />
-      <Drawer.Screen name="register" options={{ title: "Cadastro" }} />
-      <Drawer.Screen name="Agenda" options={{ title: "Agendamentos" }} />
-      <Drawer.Screen name="Solicitacoes" options={{ title: "Solicitações" }} />
-    </Drawer>
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLogged, setIsLogged] = useState(false);
+  const pathname = usePathname();
+
+  useEffect(() => {
+    const checkLogin = async () => {
+      try {
+        const user = await storage.obterUsuario();
+        setIsLogged(!!user);
+      } catch (e) {
+        console.log("Erro ao buscar login:", e);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkLogin();
+  }, []);
+
+  if (isLoading) return null;
+
+  const isPublicRoute =
+    pathname === "/" || pathname === "/initial" || pathname === "/login";
+
+  const isInsideDrawer =
+    pathname.startsWith("/(drawer)") ||
+    pathname.includes("/Agenda") ||
+    pathname.includes("/Solicitacoes");
+
+  if (isLogged && !isInsideDrawer) {
+    return <Redirect href="/(drawer)/Agenda" />;
+  }
+
+  if (!isLogged && !isPublicRoute) {
+    return <Redirect href="/initial" />;
+  }
+
+  return <Slot />;
 }

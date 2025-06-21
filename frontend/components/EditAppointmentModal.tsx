@@ -98,7 +98,7 @@ type Props = {
   profissionais: ProfissionalDTO[];
   onClose: () => void;
   onSave: (updated: EditedEvent) => void;
-  onDelete: (idAgenda: number) => void;
+  onDelete: (idAgenda: number, cancelReason?: string) => void;
 };
 
 const toMysqlString = (d: Date) => {
@@ -146,6 +146,9 @@ export default function EditAppointmentModal({
       editedEvent?.profissional?.pessoa?.NOMEPESSOA || "Profissional";
     return `${proc} com ${esp} - ${prof}`;
   });
+
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
 
   const handleDateTimeChange = (newDate: Date) => {
     setStartDate(newDate);
@@ -215,8 +218,6 @@ export default function EditAppointmentModal({
   const procs = procedimentos.filter((p) =>
     p.especialidades?.some((esp) => esp.IDESPEC === firstEspecId)
   );
-
-  // procedimentos.map((p) => console.log(p));
 
   useEffect(() => {
     const specialty = editedEvent.procedimento.especialidades[0].IDESPEC;
@@ -373,16 +374,7 @@ export default function EditAppointmentModal({
                   <Button
                     title="Cancelar"
                     color="#C0392B"
-                    onPress={() =>
-                      Alert.alert("Cancelar Agendamento", "Tem certeza?", [
-                        { text: "Cancelar", style: "cancel" },
-                        {
-                          text: "Cancelar",
-                          style: "destructive",
-                          onPress: () => onDelete(editedEvent.IDAGENDA),
-                        },
-                      ])
-                    }
+                    onPress={() => setCancelModalVisible(true)}
                   />
                 </View>
                 <View style={{ flex: 1, marginLeft: 4 }}>
@@ -403,6 +395,60 @@ export default function EditAppointmentModal({
           <IOSPicker value={startDate} />
           <Button title="OK" onPress={() => setShowStartIOS(false)} />
         </View>
+      )}
+      {cancelModalVisible && (
+        <Modal
+          transparent
+          animationType="fade"
+          visible={cancelModalVisible}
+          onRequestClose={() => setCancelModalVisible(false)}
+        >
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <View style={styles.overlay}>
+              <View style={styles.cancelModal}>
+                <Text
+                  style={[styles.label, styles.modalTitle, { fontSize: 16 }]}
+                >
+                  📝 DESCREVA O MOTIVO DO CANCELAMENTO:
+                </Text>
+                <TextInput
+                  style={[styles.textArea, { height: 96 }]}
+                  placeholder="Descreva o motivo do cancelamento"
+                  value={cancelReason}
+                  onChangeText={setCancelReason}
+                  multiline
+                />
+                <View style={styles.footerRow}>
+                  <View style={{ flex: 1, marginRight: 4 }}>
+                    <Button
+                      title="Fechar"
+                      color="#777"
+                      onPress={() => setCancelModalVisible(false)}
+                    />
+                  </View>
+                  <View style={{ flex: 1, marginLeft: 4 }}>
+                    <Button
+                      title="Confirmar"
+                      color="#C0392B"
+                      onPress={() => {
+                        if (!cancelReason.trim()) {
+                          Alert.alert(
+                            "Erro",
+                            "Informe o motivo do cancelamento."
+                          );
+                          return;
+                        }
+
+                        setCancelModalVisible(false);
+                        onDelete(editedEvent.IDAGENDA, cancelReason);
+                      }}
+                    />
+                  </View>
+                </View>
+              </View>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
       )}
     </Modal>
   );
@@ -457,6 +503,12 @@ const styles = StyleSheet.create({
     padding: 20,
     borderTopWidth: 1,
     borderColor: "#ccc",
+  },
+  cancelModal: {
+    backgroundColor: "#FFF",
+    borderRadius: 10,
+    padding: 20,
+    elevation: 5,
   },
   smallNote: { fontSize: 12, color: "#666", marginTop: 4 },
   warning: { fontSize: 12, color: "#D9AB0C", marginTop: 4, fontWeight: "bold" },

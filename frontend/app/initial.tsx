@@ -27,7 +27,7 @@ export default function InitialScreen() {
       <View style={styles.buttons}>
         <Pressable
           style={[styles.button, styles.buttonPrimary]}
-          onPress={() => router.push("/login")}
+          onPress={() => router.push("/(auth)/login")}
         >
           <Text style={[styles.buttonText, styles.primaryText]}>Entrar</Text>
         </Pressable>

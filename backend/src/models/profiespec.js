@@ -2,7 +2,7 @@ const { DataTypes } = require("sequelize");
 const sequelize = require("../database/database");
 
 const ProfiEspec = sequelize.define(
-  "ProfiEspec",
+  "PROFI_ESPEC",
   {
     ID_PROFIESPEC: {
       type: DataTypes.INTEGER,

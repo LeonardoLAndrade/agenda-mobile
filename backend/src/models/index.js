@@ -7,6 +7,7 @@ const PessoaFisica = require("./pessoafis");
 const Procedimento = require("./procedimento");
 const ProfiEspec = require("./profiespec");
 const Profissional = require("./profissional");
+const Usuario = require("./usuario");
 
 // ──────────────── RELACIONAMENTOS ──────────────── //
 
@@ -83,6 +84,12 @@ Especialidade.belongsToMany(Profissional, {
   otherKey: "ID_PROFISSIO",
   as: "profissionais",
 });
+
+Usuario.belongsTo(Profissional, {
+  foreignKey: "ID_PROFISSIO",
+  as: "usuarioProfissional",
+});
+
 // ──────────────── EXPORT ──────────────── //
 
 module.exports = {
@@ -92,5 +99,6 @@ module.exports = {
   EspecProced,
   PessoaFisica,
   Profissional,
+  Usuario,
   Agenda,
 };

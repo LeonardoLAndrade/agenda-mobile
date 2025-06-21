@@ -4,11 +4,22 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { Alert, Image, StyleSheet, Text } from "react-native";
 import { View } from "./Themed";
 import { MaterialIcons } from "@expo/vector-icons";
+import { storage } from "@/src/utils/storage";
+import { useEffect, useState } from "react";
 
 export default function Sidebar() {
   const router = useRouter();
+  const [usuario, setUsuario] = useState<any>(null);
 
-  const handleLogout = () => {
+  useEffect(() => {
+    const carregarUsuario = async () => {
+      const usuarioSalvo = await storage.obterUsuario();
+      setUsuario(usuarioSalvo);
+    };
+    carregarUsuario();
+  }, []);
+
+  const handleLogout = async () => {
     Alert.alert("Sair", "Tem certeza que deseja sair?", [
       {
         text: "Cancelar",
@@ -17,13 +28,19 @@ export default function Sidebar() {
       {
         text: "Sair",
         style: "destructive",
-        onPress: () => {
-          // Aqui você poderia limpar async storage, tokens, etc.
-          router.replace("/initial"); // Redireciona para a tela inicial
+        onPress: async () => {
+          await storage.removerUsuario();
+          router.replace("/initial");
         },
       },
     ]);
   };
+
+  function formatarCPF(cpf?: string): string {
+    if (!cpf || cpf.length !== 11) return ""; // ou retorne o próprio valor: return cpf ?? "";
+
+    return cpf.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, "$1.$2.$3-$4");
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -34,14 +51,16 @@ export default function Sidebar() {
             style={styles.avatar}
           />
         </View>
-        <Text style={styles.name}>Leonardo Lima</Text>
-        <Text style={styles.cpf}>CPF: 000.000.000-01</Text>
+        <Text style={styles.name}>{usuario?.nome_profissio}</Text>
+        <Text style={styles.cpf}>
+          CPF: {formatarCPF(usuario?.cpf_profissio)}
+        </Text>
       </View>
       <View style={styles.divider} />
       <DrawerContentScrollView style={styles.items}>
         <DrawerItem
           label="Agendamentos"
-          onPress={() => router.push("/Agenda")}
+          onPress={() => router.push("/(drawer)/Agenda")}
           labelStyle={styles.menuLabel}
           icon={({ size }) => (
             <Image
@@ -82,6 +101,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: "#029046",
+    paddingTop: 48,
   },
   header: {
     alignItems: "center",

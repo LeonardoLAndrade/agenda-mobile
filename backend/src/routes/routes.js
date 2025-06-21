@@ -3,6 +3,9 @@ const router = express.Router();
 const AgendaController = require("../controllers/agendaController.js");
 const dataController = require("../controllers/dataController.js");
 const ProfissionaisController = require("../controllers/profissionaisController.js");
+const authController = require("../controllers/authController.js");
+
+router.post("/auth/login", authController.login);
 
 // Rota para buscar profissionais por especialidade
 router.get(

@@ -12,15 +12,18 @@ import {
 } from "react-native";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import Header from "../components/Header"; // seu header com menu e logo
+import Header from "../../components/Header"; // seu header com menu e logo
 import { SafeAreaView } from "react-native-safe-area-context";
-import api from "../src/services/api"; // supondo que seu Axios está configurado em src/services/api.ts
+import api from "../../src/services/api"; // supondo que seu Axios está configurado em src/services/api.ts
 import { EditedEvent } from "@/components/EditAppointmentModal";
+import { TextInput } from "react-native-gesture-handler";
 
 export default function Solicitacoes() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selected, setSelected] = useState<EditedEvent | null>(null);
   const [solicitacoes, setSolicitacoes] = useState<EditedEvent[]>([]);
+  const [cancelReason, setCancelReason] = useState("");
+  const [showCancelInput, setShowCancelInput] = useState(false);
 
   useEffect(() => {
     carregarSolicitacoes();
@@ -56,6 +59,8 @@ export default function Solicitacoes() {
   const close = () => {
     setModalVisible(false);
     setSelected(null);
+    setCancelReason("");
+    setShowCancelInput(false);
   };
 
   const formatDate = (iso: string) =>
@@ -72,8 +77,23 @@ export default function Solicitacoes() {
   };
 
   // 1) Cancelamento de evento: deleta agenda e remove solicitação
-  const handleCancelSolicitation = () => {
+  const handleCancelSolicitation = (isEventCancel?: boolean) => {
     if (!selected) return;
+
+    if (!isEventCancel) {
+      if (showCancelInput && !cancelReason.trim()) {
+        Alert.alert("Erro", "Por favor, informe o motivo do cancelamento.");
+        return;
+      }
+
+      if (!showCancelInput) {
+        // Primeiro clique: mostrar o input
+        setShowCancelInput(true);
+        return;
+      }
+    }
+
+    // Segundo clique: confirmar
     Alert.alert("Remover Solicitação", "Deseja remover esta solicitação?", [
       { text: "Não", style: "cancel" },
       {
@@ -83,10 +103,18 @@ export default function Solicitacoes() {
           api
             .put(`/agenda/${selected.IDAGENDA}`, {
               SOLICMASTER: 1,
+              SITUAGEN: 3,
+              MOTIALT: cancelReason,
+              DATAABERT: selected.DATANOVA
+                ? selected.DATANOVA
+                : selected.DATAABERT,
+              DATANOVA: null,
             })
             .then(() => {
               removeSolicitation(selected.IDAGENDA);
               close();
+              setCancelReason("");
+              setShowCancelInput(false);
               Alert.alert("Sucesso", "Solicitação removida.");
             })
             .catch((err) => {
@@ -183,7 +211,7 @@ export default function Solicitacoes() {
                   </TouchableOpacity>
                 </View>
 
-                {selected.DATANOVA && (
+                {selected.DATANOVA && !showCancelInput && (
                   <>
                     {/* Exibe data antiga (vermelho) */}
                     <View style={styles.modalRow}>
@@ -232,29 +260,32 @@ export default function Solicitacoes() {
                       </Text>
                     </View>
                   )}
+                {!showCancelInput && (
+                  <>
+                    {/* Paciente */}
+                    <View style={styles.modalRow}>
+                      <Text style={styles.modalLabel}>👤</Text>
+                      <Text style={[styles.modalText, styles.bold]}>
+                        PACIENTE:{" "}
+                        <Text style={[styles.modalText, styles.light]}>
+                          {selected.pessoaFisAgenda.NOMEPESSOA}
+                        </Text>
+                      </Text>
+                    </View>
+                    {/* Descrição */}
+                    <View style={styles.modalRow}>
+                      <Text style={styles.modalLabel}>❗️</Text>
+                      <Text style={[styles.modalText, styles.bold]}>
+                        AGENDAMENTO:{" "}
+                        <Text
+                          style={[styles.modalText, styles.light]}
+                        >{`${selected.procedimento.DESCRPROC} com ${selected.procedimento.especialidades[0].DESCESPEC} - ${selected.profissional.pessoa.NOMEPESSOA}`}</Text>
+                      </Text>
+                    </View>
+                  </>
+                )}
 
-                {/* Paciente */}
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>👤</Text>
-                  <Text style={[styles.modalText, styles.bold]}>
-                    PACIENTE:{" "}
-                    <Text style={[styles.modalText, styles.light]}>
-                      {selected.pessoaFisAgenda.NOMEPESSOA}
-                    </Text>
-                  </Text>
-                </View>
-                {/* Descrição */}
-                <View style={styles.modalRow}>
-                  <Text style={styles.modalLabel}>❗️</Text>
-                  <Text style={[styles.modalText, styles.bold]}>
-                    AGENDAMENTO:{" "}
-                    <Text
-                      style={[styles.modalText, styles.light]}
-                    >{`${selected.procedimento.DESCRPROC} com ${selected.procedimento.especialidades[0].DESCESPEC} - ${selected.profissional.pessoa.NOMEPESSOA}`}</Text>
-                  </Text>
-                </View>
-
-                {selected.DATANOVA && (
+                {selected.DATANOVA && !showCancelInput && (
                   <View style={styles.modalRow}>
                     <Text style={styles.modalLabel}>❔</Text>
                     <Text style={[styles.modalText, styles.bold]}>
@@ -278,28 +309,53 @@ export default function Solicitacoes() {
                       </Text>
                     </View>
                   )}
+                {showCancelInput && (
+                  <>
+                    <Text style={[styles.label, styles.bold]}>
+                      📝 DESCREVA O MOTIVO DO CANCELAMENTO:
+                    </Text>
+                    <TextInput
+                      style={[styles.textArea, { height: 96 }]}
+                      placeholder="Descreva o motivo do cancelamento"
+                      value={cancelReason}
+                      onChangeText={setCancelReason}
+                      multiline
+                    />
+                  </>
+                )}
 
                 {/* Botões de ação */}
                 {selected.DATANOVA ? (
                   <View style={styles.modalActions}>
-                    <Pressable
-                      style={[styles.button, styles.cancelButton]}
-                      onPress={handleCancelSolicitation}
-                    >
-                      <Text style={styles.cancelText}>Cancelar</Text>
-                    </Pressable>
-                    <Pressable
-                      style={[styles.button, styles.approveButton]}
-                      onPress={handleApproveChange}
-                    >
-                      <Text style={styles.approveText}>Aprovar</Text>
-                    </Pressable>
+                    {!showCancelInput ? (
+                      <>
+                        <Pressable
+                          style={[styles.button, styles.cancelButton]}
+                          onPress={() => setShowCancelInput(true)}
+                        >
+                          <Text style={styles.cancelText}>Cancelar</Text>
+                        </Pressable>
+                        <Pressable
+                          style={[styles.button, styles.approveButton]}
+                          onPress={handleApproveChange}
+                        >
+                          <Text style={styles.approveText}>Aprovar</Text>
+                        </Pressable>
+                      </>
+                    ) : (
+                      <Pressable
+                        style={[styles.button, styles.cancelButton]}
+                        onPress={() => handleCancelSolicitation(false)}
+                      >
+                        <Text style={styles.cancelText}>Confirmar</Text>
+                      </Pressable>
+                    )}
                   </View>
                 ) : (
                   <View style={styles.modalActions}>
                     <Pressable
                       style={[styles.button, styles.cancelButton]}
-                      onPress={handleCancelSolicitation}
+                      onPress={() => handleCancelSolicitation(true)}
                     >
                       <Text style={styles.cancelText}>Entendido</Text>
                     </Pressable>
@@ -383,6 +439,16 @@ const styles = StyleSheet.create({
   modalText: { flex: 1, fontSize: 14, color: "#333" },
   bold: { fontWeight: "bold" },
   light: { fontWeight: "400" },
+  textInput: {
+    flex: 1,
+    borderColor: "#CCC",
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 8,
+    fontSize: 14,
+    color: "#333",
+    backgroundColor: "#F9F9F9",
+  },
 
   modalActions: {
     flexDirection: "row",
@@ -412,5 +478,14 @@ const styles = StyleSheet.create({
   newText: {
     color: "#27AE60",
     fontWeight: "600",
+  },
+  label: { fontSize: 14, fontWeight: "600" },
+  textArea: {
+    borderWidth: 1,
+    borderColor: "#CCC",
+    borderRadius: 6,
+    padding: 8,
+    marginTop: 4,
+    textAlignVertical: "top",
   },
 });

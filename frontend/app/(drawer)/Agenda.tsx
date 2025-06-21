@@ -9,11 +9,11 @@ import {
   Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import Header from "../components/Header";
-import CalendarView from "../components/CalendarView";
-import DateHeader from "../components/DateHeader";
-import AppointmentCard from "../components/AppointmentCard";
-import api from "../../frontend/src/services/api";
+import Header from "../../components/Header";
+import CalendarView from "../../components/CalendarView";
+import DateHeader from "../../components/DateHeader";
+import AppointmentCard from "../../components/AppointmentCard";
+import api from "../../../frontend/src/services/api";
 import EditAppointmentModal, {
   EditedEvent,
   Especialidade,
@@ -114,9 +114,13 @@ export default function ScheduleScreen() {
       });
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: number, cancelReason?: string) => {
     api
-      .put(`/agenda/${id}/delete`, { SITUAGEN: 3, SOLICMASTER: 1 })
+      .put(`/agenda/${id}`, {
+        SITUAGEN: 3,
+        SOLICMASTER: 1,
+        MOTIALT: cancelReason,
+      })
       .then(() => {
         setEventos((prev) => prev.filter((e) => e.IDAGENDA !== id));
         handleClose();

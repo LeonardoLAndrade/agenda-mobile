@@ -6,6 +6,7 @@ import { useNavigation, DrawerActions } from "@react-navigation/native";
 import type { DrawerNavigationProp } from "@react-navigation/drawer";
 
 type DrawerParamList = {
+  initial: undefined;
   Agenda: undefined;
   Solicitacoes: undefined;
 };

@@ -1,4 +1,3 @@
-// app/login.tsx
 import React, { useState } from "react";
 import {
   SafeAreaView,
@@ -9,15 +8,73 @@ import {
   StyleSheet,
   Pressable,
   TouchableOpacity,
+  Alert,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { colors } from "../constants/Colors";
+import { colors } from "../../constants/Colors";
+import { login } from "../../src/services/auth";
+import { storage } from "@/src/utils/storage";
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [cpf, setCpf] = useState("");
-  const [password, setPassword] = useState("");
+  const [loginInput, setLoginInput] = useState("");
+  const [senha, setSenha] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const handleLogin = () => {
+    if (loading) return;
+
+    if (!loginInput || !senha) {
+      Alert.alert("Erro", "Preencha todos os campos.");
+      return;
+    }
+
+    setLoading(true);
+
+    login(loginInput, senha)
+      .then(async (response) => {
+        const data = response?.data;
+
+        if (data?.message === "Login bem-sucedido") {
+          await storage.salvarUsuario(data.usuario);
+
+          Alert.alert("Sucesso", "Login bem-sucedido!", [
+            {
+              text: "OK",
+              onPress: () => {
+                router.push("/(drawer)/Agenda");
+              },
+            },
+          ]);
+        } else {
+          Alert.alert("Erro", "Resposta inesperada do servidor.");
+        }
+      })
+      .catch((error) => {
+        const responseData = error?.response?.data;
+        const statusCode = error?.response?.status;
+
+        let msg = "Erro ao tentar login.";
+
+        if (statusCode === 401) {
+          msg =
+            (typeof responseData === "object"
+              ? responseData?.message
+              : undefined) || "Usuário ou senha inválidos.";
+
+          console.log("⚠️ Login inválido:", msg); // ✅ não quebra o app
+        } else {
+          console.error("❌ Erro inesperado no login:", error); // só mostra se for outro tipo
+        }
+
+        Alert.alert("Erro", msg);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -26,7 +83,7 @@ export default function LoginScreen() {
       </TouchableOpacity>
 
       <Image
-        source={require("../assets/images/logo-fasiclin.png")}
+        source={require("../../assets/images/logo-fasiclin.png")}
         style={styles.logo}
         resizeMode="contain"
       />
@@ -36,13 +93,13 @@ export default function LoginScreen() {
       </Text>
 
       <View style={styles.form}>
-        <Text style={styles.label}>CPF</Text>
+        <Text style={styles.label}>Usuário</Text>
         <TextInput
           style={styles.input}
-          placeholder="Insira seu CPF"
-          value={cpf}
-          onChangeText={setCpf}
-          keyboardType="numeric"
+          placeholder="Insira seu usuário cadastrado"
+          value={loginInput}
+          onChangeText={setLoginInput}
+          autoCapitalize="none"
         />
 
         <Text style={[styles.label, { marginTop: 16 }]}>Senha</Text>
@@ -50,23 +107,20 @@ export default function LoginScreen() {
           style={styles.input}
           placeholder="Insira sua senha"
           secureTextEntry
-          value={password}
-          onChangeText={setPassword}
+          value={senha}
+          onChangeText={setSenha}
         />
 
         <Pressable
-          onPress={() => {
-            /* forgot */
-          }}
-        >
-          {/* <Text style={styles.forgot}>Esqueceu a senha?</Text> */}
-        </Pressable>
-
-        <Pressable
           style={[styles.button, styles.primary]}
-          onPress={() => router.push("/Agenda")}
+          onPress={handleLogin}
+          disabled={loading}
         >
-          <Text style={[styles.buttonText, { color: "#fff" }]}>Entrar</Text>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={[styles.buttonText, { color: "#fff" }]}>Entrar</Text>
+          )}
         </Pressable>
       </View>
     </SafeAreaView>

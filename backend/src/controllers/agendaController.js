@@ -172,6 +172,7 @@ exports.Update = (req, res, next) => {
     DESCRCOMP,
     SITUAGEN,
     SOLICMASTER,
+    MOTIALT,
   } = req.body;
 
   Agenda.findByPk(id_agenda)
@@ -185,6 +186,7 @@ exports.Update = (req, res, next) => {
           DATANOVA,
           SITUAGEN,
           SOLICMASTER,
+          MOTIALT,
         });
       } else {
         return res.status(status.NOT_FOUND).send();

@@ -18,10 +18,6 @@ const Profissional = sequelize.define(
     ID_SUPPROFI: DataTypes.INTEGER,
     STATUSPROFI: DataTypes.STRING,
     ID_CONSEPROFI: DataTypes.INTEGER,
-    /* ID_ESPEC: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    }, */
   },
   {
     tableName: "PROFISSIONAL",
