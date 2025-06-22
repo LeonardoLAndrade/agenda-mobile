@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://srvap-dev:7777/sistema",
+  baseURL: "http://160.20.22.99:3003/sistema",
 });
 
 export default api;
