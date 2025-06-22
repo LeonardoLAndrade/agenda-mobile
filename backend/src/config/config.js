@@ -1,8 +1,8 @@
 module.exports = {
   development: {
     database: {
-      host: "160.20.22.99",
-      port: "3360",
+      host: "srvdb-dev",
+      port: "3306",
       user: "aluno14",
       password: "/ud8ZNsXXvY=",
       database: "fasiclin",
