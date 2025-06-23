@@ -1,6 +1,7 @@
 import { Slot, Redirect, usePathname } from "expo-router";
 import { useEffect, useState } from "react";
 import { storage } from "@/src/utils/storage";
+import api from "@/src/services/api";
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -11,9 +12,27 @@ export default function RootLayout() {
     const checkLogin = async () => {
       try {
         const user = await storage.obterUsuario();
-        setIsLogged(!!user);
+
+        if (user) {
+          const { login } = user;
+
+          const res = await api.get(
+            `/usuarios/login/${encodeURIComponent(login)}`
+          );
+
+          if (res.data) {
+            setIsLogged(true);
+          } else {
+            await storage.removerUsuario();
+            setIsLogged(false);
+          }
+        } else {
+          setIsLogged(false);
+        }
       } catch (e) {
-        console.log("Erro ao buscar login:", e);
+        console.log("Erro ao verificar login com backend:", e);
+        await storage.removerUsuario();
+        setIsLogged(false);
       } finally {
         setIsLoading(false);
       }

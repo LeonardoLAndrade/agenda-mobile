@@ -4,8 +4,10 @@ const AgendaController = require("../controllers/agendaController.js");
 const dataController = require("../controllers/dataController.js");
 const ProfissionaisController = require("../controllers/profissionaisController.js");
 const authController = require("../controllers/authController.js");
+const usuariosController = require("../controllers/usuariosController.js");
 
 router.post("/auth/login", authController.login);
+router.get("/usuarios/login/:login", usuariosController.buscarPorLogin);
 
 // Rota para buscar profissionais por especialidade
 router.get(
