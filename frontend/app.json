@@ -2,7 +2,7 @@
   "expo": {
     "name": "Agenda",
     "slug": "agenda",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/images/ic_launcher/1024.png",
     "scheme": "agenda",
