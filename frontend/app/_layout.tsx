@@ -2,6 +2,8 @@ import { Slot, Redirect, usePathname } from "expo-router";
 import { useEffect, useState } from "react";
 import { storage } from "@/src/utils/storage";
 import api from "@/src/services/api";
+import axios from "axios";
+import { Alert } from "react-native";
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -30,7 +32,10 @@ export default function RootLayout() {
           setIsLogged(false);
         }
       } catch (e) {
-        console.log("Erro ao verificar login com backend:", e);
+        if (axios.isAxiosError(e)) {
+          Alert.alert("Erro", e.response?.data?.message || e.message);
+        }
+
         await storage.removerUsuario();
         setIsLogged(false);
       } finally {

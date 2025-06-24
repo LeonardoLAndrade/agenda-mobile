@@ -11,8 +11,11 @@ module.exports = {
   },
   production: {
     database: {
-      host: process.env.DB_HOST,
-      port: process.env.DB_PORT,
+      host: "srvdb-dev",
+      port: "3306",
+      user: "aluno14",
+      password: "/ud8ZNsXXvY=",
+      database: "fasiclin",
       dialect: "mysql",
     },
   },
