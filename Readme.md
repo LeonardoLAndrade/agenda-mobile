@@ -154,6 +154,6 @@ eas build --platform android
 
 ## 👨‍💻 Autor
 
-**Leonardo Lima**  
+[**Leonardo Lima Andrade**](https://github.com/LeonardoLAndrade)  
 Projeto desenvolvido para fins acadêmicos  
 Faculdade FASIPE Cuiabá - FASICLIN
