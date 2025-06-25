@@ -8,7 +8,6 @@ import {
   StyleSheet,
   Pressable,
   TouchableOpacity,
-  Alert,
   ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
@@ -16,6 +15,7 @@ import { MaterialIcons } from "@expo/vector-icons";
 import { colors } from "../../constants/Colors";
 import { login } from "../../src/services/auth";
 import { storage } from "@/src/utils/storage";
+import Toast from "react-native-toast-message";
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -27,7 +27,11 @@ export default function LoginScreen() {
     if (loading) return;
 
     if (!loginInput || !senha) {
-      Alert.alert("Erro", "Preencha todos os campos.");
+      Toast.show({
+        type: "info",
+        text1: "Alerta!",
+        text2: "Preencha todos os campos.",
+      });
       return;
     }
 
@@ -40,16 +44,20 @@ export default function LoginScreen() {
         if (data?.message === "Login bem-sucedido") {
           await storage.salvarUsuario(data.usuario);
 
-          Alert.alert("Sucesso", "Login bem-sucedido!", [
-            {
-              text: "OK",
-              onPress: () => {
-                router.push("/(drawer)/Agenda");
-              },
-            },
-          ]);
+          Toast.show({
+            type: "success",
+            text1: "Login realizado",
+            text2: "Redirecionando...",
+          });
+          setTimeout(() => {
+            router.push("/(drawer)/Agenda");
+          }, 500);
         } else {
-          Alert.alert("Erro", "Resposta inesperada do servidor.");
+          Toast.show({
+            type: "error",
+            text1: "Erro",
+            text2: "Resposta inesperada do servidor.",
+          });
         }
       })
       .catch((error) => {
@@ -69,7 +77,11 @@ export default function LoginScreen() {
           console.error("❌ Erro inesperado no login:", error); // só mostra se for outro tipo
         }
 
-        Alert.alert("Erro", msg);
+        Toast.show({
+          type: "error",
+          text1: "Erro",
+          text2: msg,
+        });
       })
       .finally(() => {
         setLoading(false);

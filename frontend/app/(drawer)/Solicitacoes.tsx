@@ -17,6 +17,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import api from "../../src/services/api"; // supondo que seu Axios está configurado em src/services/api.ts
 import { EditedEvent } from "@/components/EditAppointmentModal";
 import { TextInput } from "react-native-gesture-handler";
+import Toast from "react-native-toast-message";
 
 export default function Solicitacoes() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -82,7 +83,12 @@ export default function Solicitacoes() {
 
     if (!isEventCancel) {
       if (showCancelInput && !cancelReason.trim()) {
-        Alert.alert("Erro", "Por favor, informe o motivo do cancelamento.");
+        Toast.show({
+          type: "error",
+          text1: "Erro",
+          text2: "Por favor, informe o motivo do cancelamento.",
+        });
+
         return;
       }
 
@@ -115,14 +121,18 @@ export default function Solicitacoes() {
               close();
               setCancelReason("");
               setShowCancelInput(false);
-              Alert.alert("Sucesso", "Solicitação removida.");
+              Toast.show({
+                type: "success",
+                text1: "Solicitação removida com sucesso!",
+              });
             })
             .catch((err) => {
               console.error("Erro ao remover solicitação:", err);
-              Alert.alert(
-                "Falha",
-                "Não foi possível remover a solicitação. Tente novamente."
-              );
+              Toast.show({
+                type: "error",
+                text1: "Não foi possível remover a solicitação.",
+                text2: "Tente novamente.",
+              });
             });
         },
       },
@@ -135,7 +145,11 @@ export default function Solicitacoes() {
 
     // Valida campos newDate, newFrom, newTo
     if (!selected.DATANOVA || !selected.DATAABERT) {
-      Alert.alert("Erro", "Dados de nova data/hora estão incompletos.");
+      Toast.show({
+        type: "error",
+        text1: "Erro",
+        text2: "Dados de nova data/hora estão incompletos.",
+      });
       return;
     }
 
@@ -149,14 +163,18 @@ export default function Solicitacoes() {
       .then(() => {
         removeSolicitation(selected.IDAGENDA);
         close();
-        Alert.alert("Sucesso", "Evento atualizado com sucesso.");
+        Toast.show({
+          type: "success",
+          text1: "Evento atualizado com sucesso!",
+        });
       })
       .catch((err) => {
         console.error("Erro ao alterar o agendamento:", err);
-        Alert.alert(
-          "Falha",
-          "Não foi possível atualizar o agendamento. Tente novamente."
-        );
+        Toast.show({
+          type: "error",
+          text1: "Erro ao atualizar",
+          text2: "Tente novamente.",
+        });
       });
   };
 

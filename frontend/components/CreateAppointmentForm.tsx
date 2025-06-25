@@ -8,7 +8,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Modal,
-  Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import {
@@ -22,6 +21,7 @@ import {
   ProcedimentoDTO,
   ProfiEspec,
 } from "./EditAppointmentModal";
+import Toast from "react-native-toast-message";
 
 type Props = {
   onHandleSubmit: () => void;
@@ -157,7 +157,11 @@ export default function CreateAppointmentForm({ onHandleSubmit }: Props) {
       !selectedPaciente ||
       !selectedProfissional
     ) {
-      Alert.alert("Alerta!", "Preencha todos os campos obrigatórios.");
+      Toast.show({
+        type: "info",
+        text1: "Alerta!",
+        text2: "Preencha todos os campos obrigatórios.",
+      });
       return;
     }
 
@@ -173,13 +177,20 @@ export default function CreateAppointmentForm({ onHandleSubmit }: Props) {
     api
       .post("/agenda", payload)
       .then(() => {
-        Alert.alert("Sucesso!", "Agendamento criado com sucesso!");
+        Toast.show({
+          type: "success",
+          text1: "Agendamento criado com sucesso!",
+        });
         setShowForm(false);
         onHandleSubmit();
       })
       .catch((err) => {
         console.error(err);
-        Alert.alert("Erro", "Erro ao criar agendamento.");
+        Toast.show({
+          type: "error",
+          text1: "Erro",
+          text2: "Não foi possível criar o agendamento.",
+        });
       });
 
     setSelectedEspecialidade(null);

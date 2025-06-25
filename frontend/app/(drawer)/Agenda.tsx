@@ -6,7 +6,6 @@ import {
   Text,
   ScrollView,
   useWindowDimensions,
-  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Header from "../../components/Header";
@@ -23,6 +22,7 @@ import EditAppointmentModal, {
 import CreateAppointmentForm from "@/components/CreateAppointmentForm";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import Toast from "react-native-toast-message";
 
 export default function ScheduleScreen() {
   const MAX_DOTS = 3;
@@ -106,11 +106,18 @@ export default function ScheduleScreen() {
           prev.map((e) => (e.IDAGENDA === updated.IDAGENDA ? updated : e))
         );
         handleClose();
-        Alert.alert("Sucesso", "Agendamento salvo com sucesso.");
+        Toast.show({
+          type: "success",
+          text1: "Agendamento salvo com sucesso!",
+        });
       })
       .catch((err) => {
         console.error("Erro ao salvar:", err);
-        Alert.alert("Erro", "Não foi possível salvar alterações.");
+        Toast.show({
+          type: "error",
+          text1: "Erro ao salvar agendamento",
+          text2: "Não foi possível salvar as alterações.",
+        });
       });
   };
 
@@ -124,11 +131,18 @@ export default function ScheduleScreen() {
       .then(() => {
         setEventos((prev) => prev.filter((e) => e.IDAGENDA !== id));
         handleClose();
-        Alert.alert("Removido", "Agendamento cancelado com sucesso.");
+        Toast.show({
+          type: "success",
+          text1: "Agendamento cancelado com sucesso!",
+        });
       })
       .catch((err) => {
         console.error("Erro ao cancelar:", err);
-        Alert.alert("Erro", "Não foi possível cancelar.");
+        Toast.show({
+          type: "error",
+          text1: "Erro ao cancelar agendamento",
+          text2: "Não foi possível cancelar o agendamento.",
+        });
       });
   };
 

@@ -6,6 +6,7 @@ import { View } from "./Themed";
 import { MaterialIcons } from "@expo/vector-icons";
 import { storage } from "@/src/utils/storage";
 import { useEffect, useState } from "react";
+import Toast from "react-native-toast-message";
 
 export default function Sidebar() {
   const router = useRouter();
@@ -30,7 +31,14 @@ export default function Sidebar() {
         style: "destructive",
         onPress: async () => {
           await storage.removerUsuario();
-          router.replace("/initial");
+          Toast.show({
+            type: "success",
+            text1: "Usuário desconectado!",
+            text2: "Redirecionando...",
+          });
+          setTimeout(() => {
+            router.replace("/initial");
+          }, 1500);
         },
       },
     ]);

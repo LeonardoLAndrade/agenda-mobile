@@ -4,6 +4,8 @@ import { storage } from "@/src/utils/storage";
 import api from "@/src/services/api";
 import axios from "axios";
 import { Alert } from "react-native";
+import { toastConfig } from "@/src/utils/toastConfig";
+import Toast from "react-native-toast-message";
 
 export default function RootLayout() {
   const [isLoading, setIsLoading] = useState(true);
@@ -64,5 +66,10 @@ export default function RootLayout() {
     return <Redirect href="/initial" />;
   }
 
-  return <Slot />;
+  return (
+    <>
+      <Slot />
+      <Toast config={toastConfig} />
+    </>
+  );
 }

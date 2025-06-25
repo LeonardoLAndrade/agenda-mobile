@@ -12,7 +12,6 @@ import {
   TouchableWithoutFeedback,
   Keyboard,
   ScrollView,
-  Alert,
 } from "react-native";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker, {
@@ -20,6 +19,7 @@ import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
 import api from "@/src/services/api";
+import Toast from "react-native-toast-message";
 
 export type EditedEvent = {
   IDAGENDA: number;
@@ -432,10 +432,12 @@ export default function EditAppointmentModal({
                       color="#C0392B"
                       onPress={() => {
                         if (!cancelReason.trim()) {
-                          Alert.alert(
-                            "Erro",
-                            "Informe o motivo do cancelamento."
-                          );
+                          Toast.show({
+                            type: "error",
+                            text1: "Erro",
+                            text2:
+                              "Por favor, informe o motivo do cancelamento.",
+                          });
                           return;
                         }
 
