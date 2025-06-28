@@ -18,6 +18,7 @@ import api from "../../src/services/api"; // supondo que seu Axios está configu
 import { EditedEvent } from "@/components/EditAppointmentModal";
 import { TextInput } from "react-native-gesture-handler";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/src/utils/toastConfig";
 
 export default function Solicitacoes() {
   const [modalVisible, setModalVisible] = useState(false);
@@ -25,10 +26,11 @@ export default function Solicitacoes() {
   const [solicitacoes, setSolicitacoes] = useState<EditedEvent[]>([]);
   const [cancelReason, setCancelReason] = useState("");
   const [showCancelInput, setShowCancelInput] = useState(false);
+  const [ordemRecentePrimeiro, setOrdemRecentePrimeiro] = useState(true);
 
   useEffect(() => {
     carregarSolicitacoes();
-  }, [solicitacoes]);
+  }, [solicitacoes, ordemRecentePrimeiro]);
 
   const carregarSolicitacoes = async () => {
     try {
@@ -47,6 +49,11 @@ export default function Solicitacoes() {
           item.SOLICMASTER === 0 &&
           (item.DATANOVA !== null || item.SITUAGEN === "3")
       );
+      filtrados.sort((a, b) => {
+        const dateA = new Date(a.DATAABERT).getTime();
+        const dateB = new Date(b.DATAABERT).getTime();
+        return ordemRecentePrimeiro ? dateB - dateA : dateA - dateB;
+      });
       setSolicitacoes(filtrados);
     } catch (err) {
       console.error("Erro ao carregar eventos:", err);
@@ -183,9 +190,30 @@ export default function Solicitacoes() {
       <View style={styles.flex}>
         <Header />
         <Text style={styles.title}>SOLICITAÇÕES</Text>
+        <View style={{ paddingHorizontal: 16, marginTop: 8 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: "#029046",
+              padding: 12,
+              borderRadius: 6,
+              alignItems: "center",
+            }}
+            onPress={() => setOrdemRecentePrimeiro((prev) => !prev)}
+          >
+            <Text style={{ color: "#fff", fontWeight: "600" }}>
+              {ordemRecentePrimeiro
+                ? "Mostrar mais antigos primeiro"
+                : "Mostrar mais recentes primeiro"}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         <FlatList
-          data={solicitacoes}
+          data={solicitacoes.sort((a, b) => {
+            const dateA = new Date(a.DATAABERT).getTime();
+            const dateB = new Date(b.DATAABERT).getTime();
+            return ordemRecentePrimeiro ? dateB - dateA : dateA - dateB;
+          })}
           keyExtractor={(i) => i.IDAGENDA.toString()}
           contentContainerStyle={styles.list}
           renderItem={({ item }) => (
@@ -381,6 +409,7 @@ export default function Solicitacoes() {
                 )}
               </View>
             </View>
+            <Toast config={toastConfig} />
           </Modal>
         )}
       </View>

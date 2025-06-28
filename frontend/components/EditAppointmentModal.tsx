@@ -20,6 +20,7 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import api from "@/src/services/api";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/src/utils/toastConfig";
 
 export type EditedEvent = {
   IDAGENDA: number;
@@ -452,6 +453,7 @@ export default function EditAppointmentModal({
           </TouchableWithoutFeedback>
         </Modal>
       )}
+      <Toast config={toastConfig} />
     </Modal>
   );
 }

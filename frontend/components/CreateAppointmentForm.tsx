@@ -22,6 +22,7 @@ import {
   ProfiEspec,
 } from "./EditAppointmentModal";
 import Toast from "react-native-toast-message";
+import { toastConfig } from "@/src/utils/toastConfig";
 
 type Props = {
   onHandleSubmit: () => void;
@@ -332,6 +333,7 @@ export default function CreateAppointmentForm({ onHandleSubmit }: Props) {
           >
             <Text style={styles.buttonText}>CANCELAR</Text>
           </TouchableOpacity>
+          <Toast config={toastConfig} />
         </ScrollView>
       </Modal>
     </View>
